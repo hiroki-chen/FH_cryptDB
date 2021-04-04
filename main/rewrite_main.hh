@@ -273,6 +273,7 @@ protected:
                                const std::string &errname) const
     {
         auto x = types.find(t);
+        // std::cout << "find type of " << i << std::endl;
         if (x == types.end()) {
             thrower() << "missing " << errname << " " << t << " in "
                       << i << std::endl;

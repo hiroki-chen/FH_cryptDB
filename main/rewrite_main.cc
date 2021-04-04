@@ -1252,22 +1252,32 @@ Rewriter::dispatchOnLex(Analysis &a, const ProxyState &ps,
         FAIL_TextMessageError("Bad Query: [" + query + "]\t"
                               "Error Data: " + e.what());
     }
+
+    // TODO: transform where clause according to the column and the salt count. Should note
+    // that where clause can be intertwined.
+
+    // FIXME: COMPLEX WHERE CLAUSE SHOULD BE CONSIDERED.
     LEX *const lex = p->lex();
+    LEX *const new_lex = copyWithTHD(lex);
+ 	Item_cond_or *where_clause = new Item_cond_or(lex->select_lex.where, lex->select_lex.where);
+ 	set_where(&new_lex->select_lex, where_clause);
+
+ 	std::cout << "Rewritten where clause: "  << lex_to_query(new_lex) << std::endl;
 
     LOG(cdb_v) << "pre-analyze " << *lex;
 
     // optimization: do not process queries that we will not rewrite
-    if (noRewrite(*lex)) {
+    if (noRewrite(*new_lex)) {
         return new SimpleOutput(query);
-    } else if (dml_dispatcher->canDo(lex)) {
-        const SQLHandler &handler = dml_dispatcher->dispatch(lex);
+    } else if (dml_dispatcher->canDo(new_lex)) {
+        const SQLHandler &handler = dml_dispatcher->dispatch(new_lex);
         AssignOnce<LEX *> out_lex;
 
         try {
         	/*
         	 * debug
         	 */
-            out_lex = handler.transformLex(a, lex, ps);
+            out_lex = handler.transformLex(a, new_lex, ps);
         } catch (OnionAdjustExcept e) {
             LOG(cdb_v) << "caught onion adjustment";
             std::pair<std::vector<std::unique_ptr<Delta> >,
@@ -1293,13 +1303,13 @@ Rewriter::dispatchOnLex(Analysis &a, const ProxyState &ps,
 
         // Handle HOMorphic UPDATE.
         const auto plain_table =
-            lex->select_lex.top_join_list.head()->table_name;
+        	new_lex->select_lex.top_join_list.head()->table_name;
         const auto crypted_table =
             out_lex.get()->select_lex.top_join_list.head()->table_name;
         std::string where_clause;
-        if (lex->select_lex.where) {
+        if (new_lex->select_lex.where) {
             std::ostringstream where_stream;
-            where_stream << " " << *lex->select_lex.where << " ";
+            where_stream << " " << *new_lex->select_lex.where << " ";
             where_clause = where_stream.str();
         } else {
             where_clause = " TRUE ";
@@ -1307,12 +1317,12 @@ Rewriter::dispatchOnLex(Analysis &a, const ProxyState &ps,
 
         return new SpecialUpdate(query,  plain_table, crypted_table,
                                  where_clause, a.getDatabaseName(), ps);
-    } else if (ddl_dispatcher->canDo(lex)) {
-        const SQLHandler &handler = ddl_dispatcher->dispatch(lex);
-        LEX *const out_lex = handler.transformLex(a, lex, ps);
+    } else if (ddl_dispatcher->canDo(new_lex)) {
+        const SQLHandler &handler = ddl_dispatcher->dispatch(new_lex);
+        LEX *const out_lex = handler.transformLex(a, new_lex, ps);
         // HACK.
         const std::string &original_query =
-            lex->sql_command != SQLCOM_LOCK_TABLES ? query : "do 0";
+        		new_lex->sql_command != SQLCOM_LOCK_TABLES ? query : "do 0";
 
         return new DDLOutput(original_query, lex_to_query(out_lex),
                              std::move(a.deltas));

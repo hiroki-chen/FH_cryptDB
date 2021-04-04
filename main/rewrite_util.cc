@@ -162,12 +162,18 @@ gather(const Item &i, Analysis &a)
 }
 
 void
-gatherAndAddAnalysisRewritePlan(const Item &i, Analysis &a)
+gatherAndAddAnalysisRewritePlan(const Item &i, Analysis &a, const Item *original)
 {
 	/*
 	 * Where filter goes.
 	 */
     LOG(cdb_v) << "calling gather for item " << i << std::endl;
+    std::cout << "calling gather for item " << i << std::endl;
+    std::cout << "item type: " << i.type() << std::endl;
+    /*if (nullptr == original) {
+    	original = &i;
+    }
+    */
     a.rewritePlans[&i] = std::unique_ptr<RewritePlan>(gather(i, a));
 }
 

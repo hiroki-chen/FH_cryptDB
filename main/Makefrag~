@@ -10,7 +10,7 @@ CRYPTDB_SRCS := schema.cc Translator.cc Connect.cc \
 
 # change
 CRYPTDB_PROGS:= cdb_test
-# CRYPTDB_PROGS:= server
+CRYPTDB_PROGS:= server
 
 CRYPTDBPROGOBJS	:= $(patsubst %,$(OBJDIR)/main/%,$(CRYPTDB_PROGS))
 

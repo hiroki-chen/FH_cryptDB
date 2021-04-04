@@ -51,30 +51,28 @@ void rewriteInsertHelper(const Item &i, const FieldMeta &fm, Analysis &a,
 	std::string fh_i = fm.fname.substr(0, 3);
 	bool needEnc = !(e_i.compare(ENC_IDENTIFIER)) || !(fh_i.compare(FH_IDENTIFIER));
 
-
 	if (true == needEnc) {
-		std::cout << "IN rewriteInsertHelper！！！" << std::endl;
 		    std::vector<Item *> l;
 		    itemTypes.do_rewrite_insert(i, fm, a, &l);
 		    for (auto it : l) {
-		    	std::cout << "Item->str_value: " << it->str_value << std::endl;
-		    	std::cout << "Item->str_value size: " << it->str_value.length() << std::endl;
-				std::cout << "Item->str_value type: " << it->type() << std::endl; // 对VARBINARY编码
+		    	//std::cout << "Item->str_value: " << it->str_value << std::endl;
+		    	//std::cout << "Item->str_value size: " << it->str_value.length() << std::endl;
+				//std::cout << "Item->str_value type: " << it->type() << std::endl; // 对VARBINARY编码
 				int item_type = it->type();
 		    	if(item_type == 3){
 		    		char* decode = it->EncodeVarbinary();
-		    		std::cout << "Item->str_value decode: " <<  decode << std::endl; // 对VARBINARY编码
-		    		std::cout << "Item->str_value decode size: " << strlen(decode) << std::endl; // 对VARBINARY编码
+		    		//std::cout << "Item->str_value decode: " <<  decode << std::endl; // 对VARBINARY编码
+		    		//std::cout << "Item->str_value decode size: " << strlen(decode) << std::endl; // 对VARBINARY编码
 		    	}
-		    	std::cout << "Item->str_value encode: " << it->str_value << std::endl;
-		    	std::cout << "Item->str_value encode size: " << it->str_value.length() << std::endl;
+		    	//std::cout << "Item->str_value encode: " << it->str_value << std::endl;
+		    	//std::cout << "Item->str_value encode size: " << it->str_value.length() << std::endl;
 		        append_list->push_back(it);
 		    }
 	} else {
 		/*
 		 * For debug**
 		 */
-		std::cout << "Row value is:" << i.name << std::endl;
+		//std::cout << "Row value is:" << i.name << std::endl;
 		Item* tmp = const_cast<Item*>(&i);
 		append_list->push_back(tmp);
 	}
@@ -307,6 +305,9 @@ class SelectHandler : public DMLHandler {
     virtual void gather(Analysis &a, LEX *const lex, const ProxyState &ps)
         const
     {
+    	//LEX *const new_lex = copyWithTHD(lex);
+    	//Item_cond_or * transformed_item = new Item_cond_or(lex->select_lex.where, lex->select_lex.where);
+    	//set_where(&new_lex->select_lex, transformed_item);
         process_select_lex(lex->select_lex, a);
     }
 
@@ -345,7 +346,11 @@ static void
 process_filters_lex(const st_select_lex &select_lex, Analysis &a)
 {
     if (select_lex.where) {
-        gatherAndAddAnalysisRewritePlan(*select_lex.where, a);
+    	//st_select_lex *const new_select_lex = copyWithTHD(&select_lex);
+    	//Item_cond_or * transformed_item = new Item_cond_or(select_lex.where, select_lex.where);
+    	//set_where(new_select_lex, transformed_item);
+    	std::cout << "where....\n";
+    	gatherAndAddAnalysisRewritePlan(*select_lex.where, a);
     }
 
     /*if (select_lex->join &&
@@ -366,15 +371,23 @@ process_select_lex(const st_select_lex &select_lex, Analysis &a)
 {
     process_table_list(select_lex.top_join_list, a);
 
+    // st_select_lex *const new_select_lex = copyWithTHD(&select_lex);
+
     //select clause
     auto item_it =
         RiboldMYSQL::constList_iterator<Item>(select_lex.item_list);
+
     for (;;) {
         const Item *const item = item_it++;
+        // Item* i = const_cast<Item*> (item);
+        // new_select_lex->add_item_to_list(current_thd, const_cast<Item*>(i));
         if (!item)
             break;
         gatherAndAddAnalysisRewritePlan(*item, a);
     }
+    // Test if we can add items to the select query.
+
+    //select_lex.add_item_to_list
 
     process_filters_lex(select_lex, a);
 }
@@ -428,7 +441,7 @@ rewrite_order(Analysis &a, const SQL_I_List<ORDER> &lst,
               const EncSet &constr, const std::string &name)
 {
 	std::cout << "rewriting order..." << std::endl;
-    SQL_I_List<ORDER> *const new_lst = copyWithTHD(&lst);
+	SQL_I_List<ORDER> *const new_lst = copyWithTHD(&lst);
     ORDER * prev = NULL;
     for (ORDER *o = lst.first; o; o = o->next) {
         const Item &i = **o->item;

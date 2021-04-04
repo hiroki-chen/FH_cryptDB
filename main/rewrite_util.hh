@@ -37,7 +37,7 @@ RewritePlan *
 gather(const Item &i, Analysis &a);
 
 void
-gatherAndAddAnalysisRewritePlan(const Item &i, Analysis &a);
+gatherAndAddAnalysisRewritePlan(const Item &i, Analysis &a, const Item * original = nullptr);
 
 void
 optimize(Item ** const i, Analysis &a);

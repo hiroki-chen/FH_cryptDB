@@ -245,7 +245,6 @@ class CItemCompare : public CItemSubtypeFT<Item_func, FT> {
     virtual RewritePlan *
     do_gather_type(const Item_func &i, Analysis &a) const
     {
-
         LOG(cdb_v) << "CItemCompare (L1139) do_gather func " << i;
         std::cout << "CItemCompare (L1139) do_gather for " << i << std::endl;
         Item *const *const args = i.arguments();
@@ -295,6 +294,7 @@ class CItemCompare : public CItemSubtypeFT<Item_func, FT> {
     {
         LOG(cdb_v) << "do_rewrite_type Item_func " << i << " constr "
                    << EncSet(constr) << std::endl;
+        std::cout << "do_rewrite_type Item_func " << i << std::endl;
         TEST_BadItemArgumentCount(i.type(), 2, i.argument_count());
         return rewrite_args_FN(i, constr,
                                static_cast<const RewritePlanOneOLK &>(rp),

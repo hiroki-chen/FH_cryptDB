@@ -384,6 +384,7 @@ public:
 
     unsigned int pos; // > a counter indicating how many projection
                       // fields have been analyzed so far
+
     std::map<const FieldMeta *, const salt_type> salts;
     std::map<const Item *, std::unique_ptr<RewritePlan> > rewritePlans;
     std::map<std::string, std::map<const std::string, const std::string>>
