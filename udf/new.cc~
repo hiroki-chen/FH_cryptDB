@@ -1,0 +1,38 @@
+#include <memory>
+
+#include <crypto/BasicCrypto.hh>
+#include <crypto/blowfish.hh>
+#include <crypto/SWPSearch.hh>
+#include <crypto/paillier.hh>
+#include <util/params.hh>
+#include <util/util.hh>
+#include <util/version.hh>
+
+#include <mysql/mysql.h>
+#include <ctype.h>
+extern "C" 
+
+{
+
+   int main ()
+    {
+
+     FILE *fp;
+   //longlong res2 = *((longlong *)args->args[1]);
+   //char buf;
+    if ((fp = fopen("/home/zy/zy/a","w+"))==NULL)
+   {
+      strcpy(error, "can not open document");
+      return 1;
+   }
+     else
+    { 
+     return 0;
+    } 
+
+
+
+
+    }
+
+}
