@@ -47,10 +47,12 @@ template <typename ContainerType>
 void rewriteInsertHelper(const Item &i, const FieldMeta &fm, Analysis &a,
                          ContainerType *const append_list)
 {
-	const std::string enc = "enc_";
-	std::string identifier = fm.fname.substr(0, 4);
+	std::string e_i = fm.fname.substr(0, 4);
+	std::string fh_i = fm.fname.substr(0, 3);
+	bool needEnc = !(e_i.compare(ENC_IDENTIFIER)) || !(fh_i.compare(FH_IDENTIFIER));
 
-	if (identifier.compare(enc) == 0) {
+
+	if (true == needEnc) {
 		std::cout << "IN rewriteInsertHelper！！！" << std::endl;
 		    std::vector<Item *> l;
 		    itemTypes.do_rewrite_insert(i, fm, a, &l);
@@ -316,7 +318,6 @@ class SelectHandler : public DMLHandler {
             rewrite_table_list(lex->select_lex.top_join_list, a);
         set_select_lex(new_lex,
             rewrite_select_lex(new_lex->select_lex, a));
-
         return new_lex;
     }
 };
@@ -457,7 +458,6 @@ static st_select_lex *
 rewrite_filters_lex(const st_select_lex &select_lex, Analysis & a)
 {
     st_select_lex *const new_select_lex = copyWithTHD(&select_lex);
-    std::cout << "Im filter !!!!! from delete" << std::endl;
     // FIXME: Use const reference for list.
     new_select_lex->group_list =
         *rewrite_order(a, select_lex.group_list, EQ_EncSet, "group by");
@@ -604,7 +604,6 @@ rewrite_select_lex(const st_select_lex &select_lex, Analysis &a)
     // rewrite_filters_lex must be called before rewrite_proj because
     // it is responsible for filling Analysis::item_cache which
     // rewrite_proj uses.
-	std::cout << "I am invoked by deletehandler!!!" << std::endl;
     st_select_lex *const new_select_lex =
         rewrite_filters_lex(select_lex, a);
 
