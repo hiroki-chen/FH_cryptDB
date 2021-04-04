@@ -140,3 +140,4 @@ Convention : When this document uses syntax like
       multiple principals.
 
 # FH_cryptDB
+We have implemented frequency smoothing for deterministic or order-preserving encryption methods for CryptDB.
