@@ -1225,6 +1225,20 @@ noRewrite(const LEX &lex) {
     return false;
 }
 
+static bool
+noWhere (const LEX &lex) {
+	switch(lex.sql_command) {
+	case SQLCOM_SELECT:
+	case SQLCOM_DELETE:
+	case SQLCOM_UPDATE:
+	case SQLCOM_INSERT_SELECT:
+		return false;
+	default:
+		return true;
+	}
+	return true;
+}
+
 static std::string
 lex_to_query(LEX *const lex)
 {
@@ -1329,6 +1343,47 @@ Rewriter::dispatchOnLex(Analysis &a, const ProxyState &ps,
     } else {
         return NULL;
     }
+}
+
+LEX *
+Rewriter::transformForWhereClause(LEX *lex) {
+	LEX *const new_lex = copyWithTHD(lex);
+
+	if (noRewrite(*new_lex) || noWhere(*new_lex)) {
+		return new_lex;
+	} else if (dml_dispatcher->canDo(new_lex)) {
+		return do_transform_where(*new_lex);
+	} else {
+		return NULL;
+	}
+}
+
+LEX *
+do_transform_where(const LEX &lex) {
+	LEX *const new_lex = copyWithTHD(&lex);
+
+	if (new_lex->select_lex.where) {
+		return new_lex;
+		// return typical_do_transform_where(*new_select_lex->where);
+	} else {
+		return new_lex;
+	}
+}
+
+Item *
+typical_do_transform_where(const Item &item) {
+	Item *const i_item = copyWithTHD(&item);
+	Item_cond_or *new_item = new Item_cond_or();
+	new_item->add(i_item);
+	// TODO: recursively transform the where clause until the type the item is "Item_func".
+	if (Item::Type::FUNC_ITEM == item.type()) {
+		// Look up the table and generate Item_cond_or. If the fh-item' count is odd, then fill it with true.
+		while (false/*item's count is not 1*/) {
+			// call Item_cond_or's member function add(Item* item).
+		}
+
+	}
+	return new_item;
 }
 
 struct DirectiveData {

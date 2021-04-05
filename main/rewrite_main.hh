@@ -110,6 +110,10 @@ private:
     static RewriteOutput *
         dispatchOnLex(Analysis &a, const ProxyState &ps,
                       const std::string &query);
+
+    static LEX *
+		transformForWhereClause(LEX *lex);
+
     static RewriteOutput *
         handleDirective(Analysis &a, const ProxyState &ps,
                         const std::string &query);
@@ -148,6 +152,12 @@ char getHexChar(char i);
 char getBYteValue(char i);
 char* EncodeBase64(char* buf, long size);
 char *DecodeBase64(char *base64Char, long base64CharSize);
+
+LEX *
+do_transform_where(const LEX &lex);
+
+Item *
+typical_do_transform_where(const Item& item);
 
 
 #define UNIMPLEMENTED \
