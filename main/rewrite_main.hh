@@ -163,7 +163,7 @@ LEX *
 do_transform_where(const LEX &lex, Analysis &a);
 
 Item *
-typical_do_transform_where(const st_select_lex &select_lex, Analysis &a);
+typical_do_transform_where(const Item &item, Analysis &a);
 
 Item *
 makeItemCondPairs(const Item_func &item, Analysis &a);

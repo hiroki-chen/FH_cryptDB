@@ -1272,12 +1272,13 @@ Rewriter::dispatchOnLex(Analysis &a, const ProxyState &ps,
 
     // FIXME: COMPLEX WHERE CLAUSE SHOULD BE CONSIDERED.
     LEX *const lex = p->lex();
-    LEX *const new_lex = copyWithTHD(lex);
+    /*LEX *const new_lex = copyWithTHD(lex);
  	Item_cond_or *where_clause = new Item_cond_or(lex->select_lex.where, lex->select_lex.where);
  	set_where(&new_lex->select_lex, where_clause);
 
  	std::cout << "Rewritten where clause: "  << lex_to_query(new_lex) << std::endl;
-
+     */
+    LEX *const new_lex = Rewriter::transformForWhereClause(lex, a);
     LOG(cdb_v) << "pre-analyze " << *lex;
 
     // optimization: do not process queries that we will not rewrite
@@ -1354,7 +1355,7 @@ Rewriter::transformForWhereClause(LEX *lex, Analysis &a) {
 	} else if (dml_dispatcher->canDo(new_lex)) {
 		return do_transform_where(*new_lex, a);
 	} else {
-		return NULL;
+		return new_lex;
 	}
 }
 
@@ -1363,7 +1364,7 @@ do_transform_where(const LEX &lex, Analysis &a) {
 	LEX *const new_lex = copyWithTHD(&lex);
 
 	if (new_lex->select_lex.where) {
-		set_where(&(new_lex->select_lex), typical_do_transform_where(new_lex->select_lex, a));
+		set_where(&(new_lex->select_lex), typical_do_transform_where(*new_lex->select_lex.where, a));
 		return new_lex;
 	} else {
 		return new_lex;
@@ -1371,16 +1372,26 @@ do_transform_where(const LEX &lex, Analysis &a) {
 }
 
 Item *
-typical_do_transform_where(const st_select_lex &select_lex, Analysis &a) {
-	if (Item::Type::FUNC_ITEM == select_lex.where->type()) {
-		return makeItemCondPairs(static_cast<const Item_func &> (*select_lex.where), a);
+typical_do_transform_where(const Item &item, Analysis &a) {
+	if (Item::Type::FUNC_ITEM == item.type()) {
+		return makeItemCondPairs(static_cast<const Item_func &>(item), a);
 	}
 	// TODO: recursively transform the where clause until the type the item is "Item_func".
-	if (0 != select_lex.cond_count) {
-		//
+	if (Item::Type::COND_ITEM == item.type()) {
+		const Item_cond &item_cond = static_cast<const Item_cond &>(item);
+		// FIXME: Multiple conditional expression.
+		const unsigned int arg_count =
+		            RiboldMYSQL::argument_list(item_cond)->elements;
+		std::cout << arg_count << std::endl;
+		// FIXME: Should be done in a loop.
+		Item *const lhs = item_cond.arguments()[0];
+		Item *const rhs = item_cond.arguments()[1];
+		std::cout << *lhs << std::endl;
+		std::cout << *rhs << std::endl;
+		return new Item_cond_or(typical_do_transform_where(*lhs, a), typical_do_transform_where(*rhs, a));
 	} else {
 		// We do nothing.
-		return select_lex.where;
+		return copyWithTHD(&item);
 	}
 }
 
@@ -1412,7 +1423,8 @@ makeItemCondPairs(const Item_func &item, Analysis &a) {
 			const Item_field *const item_field = static_cast<const Item_field *>(args[0]);
 			const std::string &table_name = item_field->table_name;
 
-			unsigned long long salt_count = getSaltCount(db_name, table_name, field_name, std::to_string(val));
+			// unsigned long long salt_count = getSaltCount(db_name, table_name, field_name, std::to_string(val));
+			unsigned long long salt_count = 2; // For test.
 			while (salt_count--) {
 				item_cond_or->add(copyWithTHD(&item));
 			}
