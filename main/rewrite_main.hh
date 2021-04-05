@@ -153,14 +153,20 @@ char getBYteValue(char i);
 char* EncodeBase64(char* buf, long size);
 char *DecodeBase64(char *base64Char, long base64CharSize);
 
+static bool
+isDETFunc(const Item_func &item);
+
+unsigned long long
+getSaltCount(const std::string &db_name, const std::string &table_name, const std::string &field_name,
+			   const std::string &val);
 LEX *
 do_transform_where(const LEX &lex, Analysis &a);
 
 Item *
-typical_do_transform_where(const Item& item, Analysis &a, const std::string &table_name);
+typical_do_transform_where(const st_select_lex &select_lex, Analysis &a);
 
 Item *
-makeItemCondPairs(const Item_func &item, Analysis &a, const std::string table_name);
+makeItemCondPairs(const Item_func &item, Analysis &a);
 
 #define UNIMPLEMENTED \
         throw std::runtime_error(std::string("Unimplemented: ") + \

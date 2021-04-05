@@ -20,6 +20,7 @@
 
 class Analysis;
 class FieldMeta;
+class Salt;
 
 /*
  * The name must be unique as it is used as a unique identifier when
@@ -34,6 +35,25 @@ class FieldMeta;
  * > Also note that like FieldMeta, OnionMeta's children have an explicit
  *   order that must be encoded.
  */
+std::string getRandomString(const unsigned long &s_length);
+const std::string possible_characters = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz=";
+
+typedef class Salt {
+public:
+    Salt() {}
+
+    Salt(const unsigned long &salt_length) :
+            salt_name(getRandomString(salt_length)), count(1) {}
+
+    unsigned long getCount() const {return count;}
+
+    std::string getSaltName() const {return salt_name;}
+
+private:
+    unsigned long count; // The number of ciphertexts encrypted by this salt.
+    const std::string salt_name;
+} Salt;
+
 typedef class OnionMeta : public DBMeta {
 public:
     // New.
@@ -89,6 +109,13 @@ typedef class FieldMeta : public MappedDBMeta<OnionMeta, OnionMetaKey> {
 public:
     const std::string fname;
     const std::string salt_name;
+
+    double a;
+    double p;
+
+    // Stores information about the salt count.
+    std::map <unsigned long long, unsigned long long> count_table;
+    std::map <unsigned long long, std::vector<Salt>> salt_table;
 
     // New.
     FieldMeta(const std::string &name, Create_field * const field,

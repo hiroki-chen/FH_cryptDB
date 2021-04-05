@@ -278,6 +278,9 @@ FieldMeta::FieldMeta(const std::string &name, Create_field * const field,
 {
     TEST_TextMessageError(init_onions_layout(m_key, this, field),
                           "Failed to build onions for new FieldMeta!");
+
+    // TODO: CALL LoadSaltTable function.
+    // TODO: Implement serializor and deserializor for salt_table.
 }
 
 std::string FieldMeta::serialize(const DBObject &parent) const

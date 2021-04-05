@@ -1363,56 +1363,99 @@ do_transform_where(const LEX &lex, Analysis &a) {
 	LEX *const new_lex = copyWithTHD(&lex);
 
 	if (new_lex->select_lex.where) {
+		set_where(&(new_lex->select_lex), typical_do_transform_where(new_lex->select_lex, a));
 		return new_lex;
-		// return typical_do_transform_where(*new_select_lex->where, a, );
 	} else {
 		return new_lex;
 	}
 }
 
 Item *
-typical_do_transform_where(const Item &item, Analysis &a, const std::string &table_name) {
-	if (Item::Type::FUNC_ITEM == item.type()) {
-		return new Item_cond_or();
+typical_do_transform_where(const st_select_lex &select_lex, Analysis &a) {
+	if (Item::Type::FUNC_ITEM == select_lex.where->type()) {
+		return makeItemCondPairs(static_cast<const Item_func &> (*select_lex.where), a);
 	}
-	Item *const i_item = copyWithTHD(&item);
-	Item_cond_or *new_item = new Item_cond_or();
-	new_item->add(i_item);
 	// TODO: recursively transform the where clause until the type the item is "Item_func".
-	if (Item::Type::FUNC_ITEM == item.type()) {
-		// Look up the table and generate Item_cond_or. If the fh-item' count is odd, then fill it with true.
-		while (false/*item's count is not 1*/) {
-			// call Item_cond_or's member function add(Item* item).
-		}
-
+	if (0 != select_lex.cond_count) {
+		//
+	} else {
+		// We do nothing.
+		return select_lex.where;
 	}
+}
 
-	return new_item;
+static bool
+isDETFunc(const Item_func &item) {
+	switch(item.type()) {
+	case Item_func::Functype::EQ_FUNC:
+	case Item_func::Functype::NE_FUNC:
+	case Item_func::Functype::EQUAL_FUNC:
+		return true;
+	default:
+		return false;
+	}
+	return false;
 }
 
 Item *
-makeItemCondPairs(const Item_func &item, Analysis &a, const std::string table_name) {
-	if (Item::Type::FUNC_ITEM == item.type()) {
+makeItemCondPairs(const Item_func &item, Analysis &a) {
+	if (true == isDETFunc(item)) {
 		Item *const *const args = item.arguments();
 		const std::string field_name = args[0]->name;
+		const long long val = args[1]->val_int();
 
 		if (0 == field_name.substr(0, 3).compare(FH_IDENTIFIER)) {
+			// Create a dummy conditional OR, by inserting '1'.
+			Item_int *const always_true = new Item_int(1);
+			Item_cond_or *const item_cond_or = new Item_cond_or(copyWithTHD(&item), always_true);
 			const std::string &db_name = a.getDatabaseName();
 			const Item_field *const item_field = static_cast<const Item_field *>(args[0]);
 			const std::string &table_name = item_field->table_name;
 
-			// Create a directory for the storage of salt table.
-			std::string command = "mkdir -p ";
-			command.append(db_name + '/');
-			command.append(table_name + '/');
-			command.append(field_name);
+			unsigned long long salt_count = getSaltCount(db_name, table_name, field_name, std::to_string(val));
+			while (salt_count--) {
+				item_cond_or->add(copyWithTHD(&item));
+			}
 
-			system(command.c_str());
+			return item_cond_or;
 		}
 	}
 
-	std::fstream file();
-	return NULL;
+	return copyWithTHD(&item);
+}
+
+unsigned long long
+getSaltCount(const std::string &db_name, const std::string &table_name, const std::string &field_name,
+			   const std::string &val) {
+	unsigned long long count = 0;
+	// Create a directory for the storage of salt table.
+	std::string command = "mkdir -p ";
+	std::string dir = "";
+	dir.append(db_name + '/');
+	dir.append(table_name + '/');
+	dir.append(field_name);
+	command.append(dir);
+	dir.append("salt_table.csv");
+
+	system(command.c_str());
+	std::fstream file(dir);
+
+	while (!file.eof()) {
+		std::string s, buf;
+		getline(file, s);
+		std::istringstream iss(s);
+
+		getline(iss, buf, ',');
+		if (0 == buf.compare(val)) {
+			while (getline(iss, buf, ',')) {
+				count += 1;
+			}
+
+			return count;
+		}
+	}
+
+	return count;
 }
 
 struct DirectiveData {
