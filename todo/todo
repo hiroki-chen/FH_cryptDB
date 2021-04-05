@@ -1,0 +1,3 @@
+1. Implement rewritten function(s) for WHERE clause;
+2. How to rewrite complex WHERE clause? Like
+	WHERE (a = b and c = d) or (a = b and a < c and a <> d or (a < b))
