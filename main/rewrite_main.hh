@@ -112,7 +112,7 @@ private:
                       const std::string &query);
 
     static LEX *
-		transformForWhereClause(LEX *lex);
+		transformForWhereClause(LEX *lex, Analysis &a);
 
     static RewriteOutput *
         handleDirective(Analysis &a, const ProxyState &ps,
@@ -154,11 +154,13 @@ char* EncodeBase64(char* buf, long size);
 char *DecodeBase64(char *base64Char, long base64CharSize);
 
 LEX *
-do_transform_where(const LEX &lex);
+do_transform_where(const LEX &lex, Analysis &a);
 
 Item *
-typical_do_transform_where(const Item& item);
+typical_do_transform_where(const Item& item, Analysis &a, const std::string &table_name);
 
+Item *
+makeItemCondPairs(const Item_func &item, Analysis &a, const std::string table_name);
 
 #define UNIMPLEMENTED \
         throw std::runtime_error(std::string("Unimplemented: ") + \

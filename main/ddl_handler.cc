@@ -53,10 +53,10 @@ class CreateTableHandler : public DDLHandler {
 
             new_lex->alter_info.create_list =
                 accumList<Create_field>(it,
-                    [&a, &ps, &tm] (List<Create_field> out_list,
+                    [&a, &ps, &tm, &table] (List<Create_field> out_list,
                                     Create_field *const cf) {
                         return createAndRewriteField(a, ps, cf, tm.get(),
-                                                     true, out_list);
+                                                     true, out_list, table);
                 });
 
             // -----------------------------

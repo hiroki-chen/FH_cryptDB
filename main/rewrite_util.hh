@@ -64,7 +64,8 @@ List<Create_field>
 createAndRewriteField(Analysis &a, const ProxyState &ps,
                       Create_field * const cf,
                       TableMeta *const tm, bool new_table,
-                      List<Create_field> &rewritten_cfield_list);
+                      List<Create_field> &rewritten_cfield_list,
+					  std::string plain_table_name = "");
 
 Item *
 encrypt_item_layers(const Item &i, onion o, const OnionMeta &om,

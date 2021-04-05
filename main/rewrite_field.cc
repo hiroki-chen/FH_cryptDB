@@ -180,5 +180,6 @@ class ANON : public CItemSubtypeIT<Item_field, Item::Type::FIELD_ITEM> {
             l->push_back(make_item_field(*new_field, anon_table_name,
                                   fm.getSaltName()));
         }
+
     }
 } ANON;

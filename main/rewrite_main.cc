@@ -1346,32 +1346,35 @@ Rewriter::dispatchOnLex(Analysis &a, const ProxyState &ps,
 }
 
 LEX *
-Rewriter::transformForWhereClause(LEX *lex) {
+Rewriter::transformForWhereClause(LEX *lex, Analysis &a) {
 	LEX *const new_lex = copyWithTHD(lex);
 
 	if (noRewrite(*new_lex) || noWhere(*new_lex)) {
 		return new_lex;
 	} else if (dml_dispatcher->canDo(new_lex)) {
-		return do_transform_where(*new_lex);
+		return do_transform_where(*new_lex, a);
 	} else {
 		return NULL;
 	}
 }
 
 LEX *
-do_transform_where(const LEX &lex) {
+do_transform_where(const LEX &lex, Analysis &a) {
 	LEX *const new_lex = copyWithTHD(&lex);
 
 	if (new_lex->select_lex.where) {
 		return new_lex;
-		// return typical_do_transform_where(*new_select_lex->where);
+		// return typical_do_transform_where(*new_select_lex->where, a, );
 	} else {
 		return new_lex;
 	}
 }
 
 Item *
-typical_do_transform_where(const Item &item) {
+typical_do_transform_where(const Item &item, Analysis &a, const std::string &table_name) {
+	if (Item::Type::FUNC_ITEM == item.type()) {
+		return new Item_cond_or();
+	}
 	Item *const i_item = copyWithTHD(&item);
 	Item_cond_or *new_item = new Item_cond_or();
 	new_item->add(i_item);
@@ -1383,7 +1386,33 @@ typical_do_transform_where(const Item &item) {
 		}
 
 	}
+
 	return new_item;
+}
+
+Item *
+makeItemCondPairs(const Item_func &item, Analysis &a, const std::string table_name) {
+	if (Item::Type::FUNC_ITEM == item.type()) {
+		Item *const *const args = item.arguments();
+		const std::string field_name = args[0]->name;
+
+		if (0 == field_name.substr(0, 3).compare(FH_IDENTIFIER)) {
+			const std::string &db_name = a.getDatabaseName();
+			const Item_field *const item_field = static_cast<const Item_field *>(args[0]);
+			const std::string &table_name = item_field->table_name;
+
+			// Create a directory for the storage of salt table.
+			std::string command = "mkdir -p ";
+			command.append(db_name + '/');
+			command.append(table_name + '/');
+			command.append(field_name);
+
+			system(command.c_str());
+		}
+	}
+
+	std::fstream file();
+	return NULL;
 }
 
 struct DirectiveData {

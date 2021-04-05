@@ -228,6 +228,7 @@ rewrite_create_field(const FieldMeta * const fm,
 
     assert(fm->children.size() > 0);
 
+
     std::vector<Create_field *> output_cfields;
     if (!needEnc) {
     	output_cfields.push_back(f);
@@ -367,7 +368,8 @@ List<Create_field>
 createAndRewriteField(Analysis &a, const ProxyState &ps,
                       Create_field * const cf,
                       TableMeta *const tm, bool new_table,
-                      List<Create_field> &rewritten_cfield_list)
+                      List<Create_field> &rewritten_cfield_list,
+					  std::string plain_table_name)
 {
 	/*
 	 * judge first.
@@ -378,16 +380,28 @@ createAndRewriteField(Analysis &a, const ProxyState &ps,
         [] (const std::string name, Create_field * const cf,
             const ProxyState &ps, TableMeta *const tm)
     {
+        std::cout <<"Createing new fieldmeta now!"<<std::endl;
         return new FieldMeta(name, cf, ps.getMasterKey().get(),
                              ps.defaultSecurityRating(),
                              tm->leaseIncUniq());
     };
     std::unique_ptr<FieldMeta> fm(buildFieldMeta(name, cf, ps, tm));
 
-	std::string e_i = name.substr(0, 4);
-	std::string fh_i = name.substr(0, 3);
+    std::string field_name = fm->fname;
+
+    if (0 == field_name.substr(0, 3).compare(FH_IDENTIFIER)) {
+    	std::string dir = "";
+        dir.append(a.getDatabaseName() + '/');
+        dir.append(plain_table_name + '/');
+        dir.append(field_name);
+        std::string command = "mkdir -p " + dir;
+        system(command.c_str());
+     }
+
+	const std::string enc = "enc_";
+	std::string identifier = name.substr(0, 4);
 	bool needEnc =
-			!(e_i.compare(ENC_IDENTIFIER)) || !(fh_i.compare(FH_IDENTIFIER));
+			!(identifier.compare(enc));
 
     // -----------------------------
     //         Rewrite FIELD       
