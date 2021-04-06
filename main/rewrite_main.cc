@@ -1,6 +1,7 @@
 #include <string>
 #include <memory>
 #include <map>
+#include <cmath>
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -8,6 +9,7 @@
 #include <vector>
 #include <set>
 #include <list>
+#include <random> /* For test. */
 #include <algorithm>
 #include <stdio.h>
 #include <typeinfo>
@@ -1378,21 +1380,53 @@ typical_do_transform_where(const Item &item, Analysis &a) {
 	}
 	// TODO: recursively transform the where clause until the type the item is "Item_func".
 	if (Item::Type::COND_ITEM == item.type()) {
-		const Item_cond &item_cond = static_cast<const Item_cond &>(item);
-		// FIXME: Multiple conditional expression.
-		const unsigned int arg_count =
-		            RiboldMYSQL::argument_list(item_cond)->elements;
-		std::cout << arg_count << std::endl;
-		// FIXME: Should be done in a loop.
-		Item *const lhs = item_cond.arguments()[0];
-		Item *const rhs = item_cond.arguments()[1];
-		std::cout << *lhs << std::endl;
-		std::cout << *rhs << std::endl;
-		return new Item_cond_or(typical_do_transform_where(*lhs, a), typical_do_transform_where(*rhs, a));
+		const Item_cond& tmp_item = static_cast<const Item_cond &>(item);
+		return
+				Item_cond::Functype::COND_AND_FUNC == tmp_item.functype() ?
+					do_transform_where_and(static_cast<const Item_cond_and&>(item), a) :
+					do_transform_where_or(static_cast<const Item_cond_or&>(item), a);
 	} else {
 		// We do nothing.
 		return copyWithTHD(&item);
 	}
+}
+
+Item *
+do_transform_where_and(const Item_cond_and &item_cond_and, Analysis &a) {
+	Item_cond_and *const new_item_cond = new Item_cond_and();
+	// FIXME: Should be done in a loop.
+	auto it =
+	          RiboldMYSQL::constList_iterator<Item>(*RiboldMYSQL::argument_list(item_cond_and));
+	 for (;;) {
+		 const Item *const argitem = it++;
+	     if (!argitem) {
+	    	 break;
+	     }
+
+	     Item *const cond_item_from_lower = typical_do_transform_where(*argitem, a);
+	     new_item_cond->add(cond_item_from_lower);
+	 }
+
+	return new_item_cond;
+}
+
+Item *
+do_transform_where_or(const Item_cond_or &item_cond_or, Analysis &a) {
+	Item_cond_or *const new_item_cond = new Item_cond_or();
+	// FIXME: Should be done in a loop.
+	auto it =
+	          RiboldMYSQL::constList_iterator<Item>(*RiboldMYSQL::argument_list(item_cond_or));
+	 for (;;) {
+		 const Item *const argitem = it++;
+	     if (!argitem) {
+	    	 break;
+	     }
+
+	     Item *const cond_item_from_lower = typical_do_transform_where(*argitem, a);
+	     new_item_cond->add(cond_item_from_lower);
+	 }
+
+	return new_item_cond;
 }
 
 static bool
@@ -1416,16 +1450,14 @@ makeItemCondPairs(const Item_func &item, Analysis &a) {
 		const long long val = args[1]->val_int();
 
 		if (0 == field_name.substr(0, 3).compare(FH_IDENTIFIER)) {
-			// Create a dummy conditional OR, by inserting '1'.
-			Item_int *const always_true = new Item_int(1);
-			Item_cond_or *const item_cond_or = new Item_cond_or(copyWithTHD(&item), always_true);
+			Item_cond_or *const item_cond_or = new Item_cond_or();
 			const std::string &db_name = a.getDatabaseName();
 			const Item_field *const item_field = static_cast<const Item_field *>(args[0]);
 			const std::string &table_name = item_field->table_name;
 
 			// unsigned long long salt_count = getSaltCount(db_name, table_name, field_name, std::to_string(val));
-			unsigned long long salt_count = 2; // For test.
-			while (salt_count--) {
+			unsigned long long salt_count = 2;
+			while (salt_count-- >= 1) {
 				item_cond_or->add(copyWithTHD(&item));
 			}
 

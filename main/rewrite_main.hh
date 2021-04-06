@@ -166,6 +166,12 @@ Item *
 typical_do_transform_where(const Item &item, Analysis &a);
 
 Item *
+do_transform_where_and(const Item_cond_and &item_cond_and, Analysis &a);
+
+Item *
+do_transform_where_or(const Item_cond_or &item_cond_or, Analysis &a);
+
+Item *
 makeItemCondPairs(const Item_func &item, Analysis &a);
 
 #define UNIMPLEMENTED \
