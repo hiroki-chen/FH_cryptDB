@@ -4,6 +4,7 @@
 #include <util/enum_text.hh>
 #include <parser/embedmysql.hh>
 #include <parser/stringify.hh>
+#include <parser/lex_util.hh>
 #include <main/CryptoHandlers.hh>
 #include <main/Translator.hh>
 #include <main/dbobject.hh>
@@ -261,6 +262,73 @@ private:
         FAIL_TextMessageError("SchemaInfo can not be serialized!");
     }
 } SchemaInfo;
+
+typedef class MyItem {
+public:
+	static const MyItem * getInstanceByParam(const std::string& db_name,
+										  const std::string &table_name,
+								          const std::string &field_name,
+										  const Item &item)
+	{
+		Item_num *const item_num = copyWithTHD(&(static_cast<const Item_num&>(item)));
+		MyItem *const item_to_find = new MyItem(db_name, table_name, field_name, item_num);
+
+			auto it = MyItem::instances.find(*item_to_find);
+			if ( MyItem::instances.end() != it) {
+				delete item_to_find; // Useless.
+				return &(it->first);
+			} else {
+				 MyItem::instances[*item_to_find] ++;
+				return item_to_find;
+			}
+	}
+
+	std::string getDBName() const {return db_name;}
+
+	std::string getTableName() const {return table_name;}
+
+	std::string getFieldName() const {return field_name;}
+
+	Item_num * getItem() const {
+		if (nullptr == item_int) {
+			return item_float;
+		} else {
+			return item_int;
+		}
+	}
+
+	bool operator<(const MyItem& rhs) const {
+		if (db_name < rhs.getDBName()) {
+			return true;
+		} else if (table_name < rhs.getTableName()) {
+			return true;
+		} else if (field_name < rhs.getFieldName()) {
+			return true;
+		} else {
+			if (item_int == nullptr) {
+				return item_float->val_real_from_decimal() < rhs.getItem()->val_real_from_decimal();
+			} else {
+				return item_int->val_int() < rhs.getItem()->val_int();
+			}
+		}
+	}
+private:
+	MyItem() = delete;
+
+	MyItem(const std::string& db_name,
+			const std::string &table_name,
+	        const std::string &field_name,
+			Item_num *item);
+
+	std::string db_name;
+	std::string table_name;
+	std::string field_name;
+	Item_int * item_int;
+	Item_float * item_float;
+
+	static std::map<MyItem, unsigned int> instances;
+} MyItem;
+
 
 bool
 IsMySQLTypeNumeric(enum_field_types t);

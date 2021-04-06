@@ -1376,6 +1376,10 @@ do_transform_where(const LEX &lex, Analysis &a) {
 Item *
 typical_do_transform_where(const Item &item, Analysis &a) {
 	if (Item::Type::FUNC_ITEM == item.type()) {
+		//const MyItem * item1 = MyItem::getInstanceByParam("a", "b", "c", item);
+		//const MyItem * item2 = MyItem::getInstanceByParam("a", "b", "c", item);
+		std::cout << "test for MyItem..\n";
+		//std::cout << "Same item? " << (item1 == item2) << std::endl;
 		return makeItemCondPairs(static_cast<const Item_func &>(item), a);
 	}
 	// TODO: recursively transform the where clause until the type the item is "Item_func".
@@ -1429,7 +1433,7 @@ do_transform_where_or(const Item_cond_or &item_cond_or, Analysis &a) {
 	return new_item_cond;
 }
 
-static bool
+bool
 isDETFunc(const Item_func &item) {
 	switch(item.type()) {
 	case Item_func::Functype::EQ_FUNC:

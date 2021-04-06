@@ -50,6 +50,29 @@ DBMeta::doFetchChildren(const std::unique_ptr<Connect> &e_conn,
     return out_vec;
 }
 
+std::map<MyItem, unsigned int> MyItem::instances;
+
+MyItem::MyItem(const std::string& db_name,
+		  	  	 const std::string &table_name,
+				 const std::string &field_name,
+				 Item_num *item)
+{
+	this->db_name = db_name;
+	this->table_name = table_name;
+	this->field_name = field_name;
+
+	/*
+	 * FIXME: you should do judge first in order to make the abstract class to be identifiable.
+	 */
+	if (Item::Type::INT_ITEM == item->type()) {
+		this->item_int = static_cast<Item_int *>(item);
+		this->item_float = nullptr;
+	} else {
+		this->item_float = static_cast<Item_float *>(item);
+		this->item_int = nullptr;
+	}
+}
+
 OnionMeta::OnionMeta(onion o, std::vector<SECLEVEL> levels,
                      const AES_KEY * const m_key,
                      Create_field * const cf, unsigned long uniq_count)

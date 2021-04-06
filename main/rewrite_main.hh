@@ -153,7 +153,7 @@ char getBYteValue(char i);
 char* EncodeBase64(char* buf, long size);
 char *DecodeBase64(char *base64Char, long base64CharSize);
 
-static bool
+bool
 isDETFunc(const Item_func &item);
 
 unsigned long long
