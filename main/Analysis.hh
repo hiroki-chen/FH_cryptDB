@@ -84,7 +84,7 @@ typedef struct ProxyState {
     {
         return masterKey;
     }
-    const std::unique_ptr<Connect> &getConn() const {std::cout << "in ProxyState getConn" << std::endl; return conn;} // 连接信息，connect=mysql类型
+    const std::unique_ptr<Connect> &getConn() const {return conn;} // 连接信息，connect=mysql类型
     const std::unique_ptr<Connect> &getEConn() const {return e_conn;}
     void close(){ conn->close(); e_conn->close(); }
     static int db_init(const std::string &embed_dir);

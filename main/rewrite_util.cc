@@ -387,21 +387,20 @@ createAndRewriteField(Analysis &a, const ProxyState &ps,
     };
     std::unique_ptr<FieldMeta> fm(buildFieldMeta(name, cf, ps, tm));
 
-    std::string field_name = fm->fname;
-
-    if (0 == field_name.substr(0, 3).compare(FH_IDENTIFIER)) {
+    if (0 == name.substr(0, 3).compare(FH_IDENTIFIER)) {
     	std::string dir = "";
         dir.append(a.getDatabaseName() + '/');
         dir.append(plain_table_name + '/');
-        dir.append(field_name);
+        dir.append(name);
         std::string command = "mkdir -p " + dir;
         system(command.c_str());
      }
 
-	const std::string enc = "enc_";
-	std::string identifier = name.substr(0, 4);
+	std::string e_i = name.substr(0, 4);
+	std::string fh_i = name.substr(0, 3);
 	bool needEnc =
-			!(identifier.compare(enc));
+			!(e_i.compare(ENC_IDENTIFIER)) ||
+			!(fh_i.compare(FH_IDENTIFIER));
 
     // -----------------------------
     //         Rewrite FIELD       
