@@ -1,3 +1,8 @@
 1. Implement rewritten function(s) for WHERE clause;
 2. How to rewrite complex WHERE clause? Like
 	WHERE (a = b and c = d) or (a = b and a < c and a <> d or (a < b))
+> This is finished and successfully supported.
+
+3. How to read / write the salt table from embedded SQL database or just from files?
+4. When and how to add salts to each FH item.
+5. Will the encryption and decryption functions be rewritten to support our transformation of the item. If so, how to rewrite them.
