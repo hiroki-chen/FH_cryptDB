@@ -55,6 +55,7 @@ private:
     const std::string salt_name;
 } Salt;
 
+
 typedef class OnionMeta : public DBMeta {
 public:
     // New.
@@ -268,19 +269,31 @@ public:
 	static const MyItem * getInstanceByParam(const std::string& db_name,
 										  const std::string &table_name,
 								          const std::string &field_name,
-										  const Item &item)
+										  Item *const item)
 	{
-		Item_num *const item_num = copyWithTHD(&(static_cast<const Item_num&>(item)));
-		MyItem *const item_to_find = new MyItem(db_name, table_name, field_name, item_num);
+		// Item_num *const item_num = copyWithTHD(&(static_cast<const Item_num&>(item)));
 
-			auto it = MyItem::instances.find(*item_to_find);
-			if ( MyItem::instances.end() != it) {
-				delete item_to_find; // Useless.
-				return &(it->first);
-			} else {
-				 MyItem::instances[*item_to_find] ++;
-				return item_to_find;
-			}
+		/*
+		 * If the item is not a num item, then we should return nullptr;
+		 * otherwise we cannot apply val methods to it (compiler cannot make any judgement, it knows nothing).
+		 */
+
+		if (Item::Type::INT_ITEM != item->type() &&
+			Item::Type::DECIMAL_ITEM != item->type() &&
+			Item::Type::REAL_ITEM != item->type())
+		{
+			return nullptr;
+		}
+
+		MyItem *const item_to_find = new MyItem(db_name, table_name, field_name, item);
+		MyItem::instances[*item_to_find] ++;
+
+		auto it = MyItem::instances.find(*item_to_find);
+		assert(MyItem::instances.end() != it);
+		return &(it->first);
+		/**
+		 * If not found, it must be caused by some hidden errors.
+		 */
 	}
 
 	std::string getDBName() const {return db_name;}
@@ -297,36 +310,37 @@ public:
 		}
 	}
 
-	bool operator<(const MyItem& rhs) const {
-		if (db_name < rhs.getDBName()) {
-			return true;
-		} else if (table_name < rhs.getTableName()) {
-			return true;
-		} else if (field_name < rhs.getFieldName()) {
-			return true;
-		} else {
-			if (item_int == nullptr) {
-				return item_float->val_real_from_decimal() < rhs.getItem()->val_real_from_decimal();
+	struct MyCompare {
+		bool operator() (const MyItem& lhs, const MyItem& rhs) const {
+			if (lhs.getDBName() < rhs.getDBName()) {
+				return true;
+			} else if (lhs.getTableName() < rhs.getTableName()) {
+				return true;
+			} else if (lhs.getFieldName() < rhs.getFieldName()) {
+				return true;
 			} else {
-				return item_int->val_int() < rhs.getItem()->val_int();
+				return lhs.getValue() < rhs.getValue();
 			}
 		}
-	}
+	};
+
+	double getValue() const;
+
 private:
 	MyItem() = delete;
 
 	MyItem(const std::string& db_name,
 			const std::string &table_name,
 	        const std::string &field_name,
-			Item_num *item);
+			Item *const item);
 
-	std::string db_name;
-	std::string table_name;
-	std::string field_name;
+	const std::string db_name;
+	const std::string table_name;
+	const std::string field_name;
 	Item_int * item_int;
 	Item_float * item_float;
 
-	static std::map<MyItem, unsigned int> instances;
+	static std::map<MyItem, unsigned int, MyCompare> instances;
 } MyItem;
 
 

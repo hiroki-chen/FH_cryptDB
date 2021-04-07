@@ -1376,10 +1376,10 @@ do_transform_where(const LEX &lex, Analysis &a) {
 Item *
 typical_do_transform_where(const Item &item, Analysis &a) {
 	if (Item::Type::FUNC_ITEM == item.type()) {
-		//const MyItem * item1 = MyItem::getInstanceByParam("a", "b", "c", item);
-		//const MyItem * item2 = MyItem::getInstanceByParam("a", "b", "c", item);
-		std::cout << "test for MyItem..\n";
-		//std::cout << "Same item? " << (item1 == item2) << std::endl;
+		Item_func *const item_func = copyWithTHD(&static_cast<const Item_func&>(item));
+		assert(2 == item_func->arg_count);
+		const MyItem * item1 = MyItem::getInstanceByParam("a", "b", "c", item_func->arguments()[1]);
+		const MyItem * item2 = MyItem::getInstanceByParam("a", "b", "c", item_func->arguments()[1]);
 		return makeItemCondPairs(static_cast<const Item_func &>(item), a);
 	}
 	// TODO: recursively transform the where clause until the type the item is "Item_func".
