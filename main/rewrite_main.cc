@@ -14,6 +14,9 @@
 #include <stdio.h>
 #include <typeinfo>
 
+#include <sys/stat.h>
+#include <sys/types.h>
+
 #include <main/rewrite_main.hh>
 #include <main/rewrite_util.hh>
 #include <util/cryptdb_log.hh>
@@ -25,6 +28,10 @@
 #include <main/ddl_handler.hh>
 #include <main/metadata_tables.hh>
 #include <main/macro_util.hh>
+
+#include "parser/rapidjson/document.h"
+#include "parser/rapidjson/filereadstream.h"
+
 
 #include "field.h"
 
@@ -1377,9 +1384,7 @@ Item *
 typical_do_transform_where(const Item &item, Analysis &a) {
 	if (Item::Type::FUNC_ITEM == item.type()) {
 		Item_func *const item_func = copyWithTHD(&static_cast<const Item_func&>(item));
-		assert(2 == item_func->arg_count);
-		const MyItem * item1 = MyItem::getInstanceByParam("a", "b", "c", item_func->arguments()[1]);
-		const MyItem * item2 = MyItem::getInstanceByParam("a", "b", "c", item_func->arguments()[1]);
+		// assert(2 == item_func->arg_count);
 		return makeItemCondPairs(static_cast<const Item_func &>(item), a);
 	}
 	// TODO: recursively transform the where clause until the type the item is "Item_func".
@@ -1459,8 +1464,8 @@ makeItemCondPairs(const Item_func &item, Analysis &a) {
 			const Item_field *const item_field = static_cast<const Item_field *>(args[0]);
 			const std::string &table_name = item_field->table_name;
 
-			// unsigned long long salt_count = getSaltCount(db_name, table_name, field_name, std::to_string(val));
-			unsigned long long salt_count = 2;
+			unsigned long long salt_count = getSaltCount(db_name, table_name, field_name, std::to_string(val));
+			//unsigned long long salt_count = 2;
 			while (salt_count-- >= 1) {
 				item_cond_or->add(copyWithTHD(&item));
 			}
@@ -1477,33 +1482,46 @@ getSaltCount(const std::string &db_name, const std::string &table_name, const st
 			   const std::string &val) {
 	unsigned long long count = 0;
 	// Create a directory for the storage of salt table.
-	std::string command = "mkdir -p ";
-	std::string dir = "";
+	std::string dir = "CryptDB_DATA/";
 	dir.append(db_name + '/');
-	dir.append(table_name + '/');
-	dir.append(field_name);
-	command.append(dir);
-	dir.append("salt_table.csv");
+	dir.append(table_name);
 
-	system(command.c_str());
-	std::fstream file(dir);
-
-	while (!file.eof()) {
-		std::string s, buf;
-		getline(file, s);
-		std::istringstream iss(s);
-
-		getline(iss, buf, ',');
-		if (0 == buf.compare(val)) {
-			while (getline(iss, buf, ',')) {
-				count += 1;
-			}
-
-			return count;
-		}
+	/**
+	 * Check first if the directory exists on the system.
+	 */
+	struct stat sb;
+	if (!stat(dir.c_str(), &sb) == 0 || !S_ISDIR(sb.st_mode)) {
+		std::string command = "mkdir -p ";
+		command.append(dir);
+		system(command.c_str());
 	}
 
-	return count;
+	/**
+	 * TODO: This is done by using json parser.
+	 */
+	dir.append("/");
+	std::string file_name = dir.append(field_name + ".json");
+	return do_get_salt_count(dir, file_name);
+}
+
+unsigned long long
+do_get_salt_count(const std::string &dir, const std::string &file_name) {
+	// Create a rapidjson Document object.
+	rapidjson::Document doc;
+
+	// Read from file.
+	FILE *fp = fopen(file_name.c_str(), "r");
+	char read_buffer[65536];
+	rapidjson::FileReadStream frs(fp, read_buffer, sizeof(read_buffer));
+
+	// Parse the file into DOM.
+	doc.ParseStream(frs);
+	fclose(fp);
+
+	assert(doc.IsObject());
+	const rapidjson::Value& a = doc["a"];
+	assert(a.IsArray());
+	return a.Size();
 }
 
 struct DirectiveData {

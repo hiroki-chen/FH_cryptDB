@@ -385,7 +385,17 @@ public:
     unsigned int pos; // > a counter indicating how many projection
                       // fields have been analyzed so far
 
-    std::map<const FieldMeta *, const salt_type> salts;
+    std::map<const FieldMeta *, const salt_type> salts; // Discarded
+    /**
+     * New
+     */
+
+    std::map<MyItem, std::vector<Salt>> salt_table;
+
+    /**
+     * Once the item is encrypted fully, we should reset the count_table.
+     */
+    std::map<MyItem, unsigned long long> count_table;
     std::map<const Item *, std::unique_ptr<RewritePlan> > rewritePlans;
     std::map<std::string, std::map<const std::string, const std::string>>
         table_aliases;

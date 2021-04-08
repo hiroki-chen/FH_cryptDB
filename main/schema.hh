@@ -266,36 +266,6 @@ private:
 
 typedef class MyItem {
 public:
-	static const MyItem * getInstanceByParam(const std::string& db_name,
-										  const std::string &table_name,
-								          const std::string &field_name,
-										  Item *const item)
-	{
-		// Item_num *const item_num = copyWithTHD(&(static_cast<const Item_num&>(item)));
-
-		/*
-		 * If the item is not a num item, then we should return nullptr;
-		 * otherwise we cannot apply val methods to it (compiler cannot make any judgement, it knows nothing).
-		 */
-
-		if (Item::Type::INT_ITEM != item->type() &&
-			Item::Type::DECIMAL_ITEM != item->type() &&
-			Item::Type::REAL_ITEM != item->type())
-		{
-			return nullptr;
-		}
-
-		MyItem *const item_to_find = new MyItem(db_name, table_name, field_name, item);
-		MyItem::instances[*item_to_find] ++;
-
-		auto it = MyItem::instances.find(*item_to_find);
-		assert(MyItem::instances.end() != it);
-		return &(it->first);
-		/**
-		 * If not found, it must be caused by some hidden errors.
-		 */
-	}
-
 	std::string getDBName() const {return db_name;}
 
 	std::string getTableName() const {return table_name;}
@@ -326,6 +296,8 @@ public:
 
 	double getValue() const;
 
+	std::string getCSVFilePath() const;
+
 private:
 	MyItem() = delete;
 
@@ -339,8 +311,6 @@ private:
 	const std::string field_name;
 	Item_int * item_int;
 	Item_float * item_float;
-
-	static std::map<MyItem, unsigned int, MyCompare> instances;
 } MyItem;
 
 

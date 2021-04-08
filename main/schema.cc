@@ -50,9 +50,6 @@ DBMeta::doFetchChildren(const std::unique_ptr<Connect> &e_conn,
     return out_vec;
 }
 
-std::map<MyItem, unsigned int, MyItem::MyCompare> MyItem::instances;
-
-
 MyItem::MyItem(const std::string& db_name,
 		  	  	 const std::string &table_name,
 				 const std::string &field_name,
@@ -70,6 +67,15 @@ MyItem::MyItem(const std::string& db_name,
 		this->item_float = static_cast<Item_float *>(item);
 		this->item_int = nullptr;
 	}
+}
+
+std::string
+MyItem::getCSVFilePath() const {
+	std::string path = "";
+	path.append(db_name + '/');
+	path.append(table_name + '/');
+	path.append(field_name + ".csv");
+	return path;
 }
 
 double
