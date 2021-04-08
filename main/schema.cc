@@ -69,15 +69,6 @@ MyItem::MyItem(const std::string& db_name,
 	}
 }
 
-std::string
-MyItem::getCSVFilePath() const {
-	std::string path = "";
-	path.append(db_name + '/');
-	path.append(table_name + '/');
-	path.append(field_name + ".csv");
-	return path;
-}
-
 double
 MyItem::getValue() const {
 	if (nullptr == item_int) {

@@ -46,13 +46,16 @@ public:
     Salt(const unsigned long &salt_length) :
             salt_name(getRandomString(salt_length)), count(1) {}
 
+    Salt(const unsigned long& _count, const std::string &_salt_name) :
+    	salt_name(_salt_name), count(_count) {}
+
     unsigned long getCount() const {return count;}
 
     std::string getSaltName() const {return salt_name;}
 
 private:
-    unsigned long count; // The number of ciphertexts encrypted by this salt.
     const std::string salt_name;
+    unsigned long count; // The number of ciphertexts encrypted by this salt.
 } Salt;
 
 
@@ -116,8 +119,8 @@ public:
     double p;
 
     // Stores information about the salt count.
-    std::map <unsigned long long, unsigned long long> count_table;
-    std::map <unsigned long long, std::vector<Salt>> salt_table;
+    // std::map <unsigned long long, unsigned long long> count_table;
+    // std::map <unsigned long long, std::vector<Salt>> salt_table;
 
     // New.
     FieldMeta(const std::string &name, Create_field * const field,
@@ -295,8 +298,6 @@ public:
 	};
 
 	double getValue() const;
-
-	std::string getCSVFilePath() const;
 
 private:
 	MyItem() = delete;

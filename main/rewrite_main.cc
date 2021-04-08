@@ -1464,7 +1464,7 @@ makeItemCondPairs(const Item_func &item, Analysis &a) {
 			const Item_field *const item_field = static_cast<const Item_field *>(args[0]);
 			const std::string &table_name = item_field->table_name;
 
-			unsigned long long salt_count = getSaltCount(db_name, table_name, field_name, std::to_string(val));
+			unsigned long long salt_count = getSaltCount(db_name, table_name, field_name, std::to_string(val), a);
 			//unsigned long long salt_count = 2;
 			while (salt_count-- >= 1) {
 				item_cond_or->add(copyWithTHD(&item));
@@ -1479,7 +1479,7 @@ makeItemCondPairs(const Item_func &item, Analysis &a) {
 
 unsigned long long
 getSaltCount(const std::string &db_name, const std::string &table_name, const std::string &field_name,
-			   const std::string &val) {
+			   const std::string &val, Analysis &a) {
 	unsigned long long count = 0;
 	// Create a directory for the storage of salt table.
 	std::string dir = "CryptDB_DATA/";
@@ -1501,11 +1501,12 @@ getSaltCount(const std::string &db_name, const std::string &table_name, const st
 	 */
 	dir.append("/");
 	std::string file_name = dir.append(field_name + ".json");
-	return do_get_salt_count(dir, file_name);
+	return do_get_salt_count(dir, file_name, val, a);
 }
 
 unsigned long long
-do_get_salt_count(const std::string &dir, const std::string &file_name) {
+do_get_salt_count(const std::string &dir, const std::string &file_name,
+				    const std::string &val, Analysis &a) {
 	// Create a rapidjson Document object.
 	rapidjson::Document doc;
 
@@ -1519,9 +1520,11 @@ do_get_salt_count(const std::string &dir, const std::string &file_name) {
 	fclose(fp);
 
 	assert(doc.IsObject());
-	const rapidjson::Value& a = doc["a"];
-	assert(a.IsArray());
-	return a.Size();
+	const rapidjson::Value& test = doc["a"];
+	assert(test.IsArray());
+	assert(a.loadSaltsFromJsonDOM(doc, val));
+
+	return test.Size();
 }
 
 struct DirectiveData {

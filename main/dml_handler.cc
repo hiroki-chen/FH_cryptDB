@@ -60,7 +60,6 @@ void rewriteInsertHelper(const Item &i, const FieldMeta &fm, Analysis &a,
 				//std::cout << "Item->str_value type: " << it->type() << std::endl; // 对VARBINARY编码
 				int item_type = it->type();
 		    	if(item_type == 3){
-		    		char* decode = it->EncodeVarbinary();
 		    		//std::cout << "Item->str_value decode: " <<  decode << std::endl; // 对VARBINARY编码
 		    		//std::cout << "Item->str_value decode size: " << strlen(decode) << std::endl; // 对VARBINARY编码
 		    	}
@@ -73,8 +72,7 @@ void rewriteInsertHelper(const Item &i, const FieldMeta &fm, Analysis &a,
 		 * For debug**
 		 */
 		//std::cout << "Row value is:" << i.name << std::endl;
-		Item* tmp = const_cast<Item*>(&i);
-		append_list->push_back(tmp);
+		append_list->push_back(copyWithTHD(&i));
 	}
 }
 

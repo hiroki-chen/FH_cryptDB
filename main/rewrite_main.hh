@@ -158,11 +158,12 @@ isDETFunc(const Item_func &item);
 
 unsigned long long
 getSaltCount(const std::string &db_name, const std::string &table_name, const std::string &field_name,
-			   const std::string &val);
+			   const std::string &val, Analysis &a);
 
 
 unsigned long long
-do_get_salt_count(const std::string &dir, const std::string &file_name);
+do_get_salt_count(const std::string &dir, const std::string &file_name,
+				    const std::string &val, Analysis &a);
 
 LEX *
 do_transform_where(const LEX &lex, Analysis &a);

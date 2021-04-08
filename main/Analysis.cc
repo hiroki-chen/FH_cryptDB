@@ -1145,6 +1145,14 @@ Analysis::translateNonAliasPlainToAnonTableName(const std::string &db,
     return tm->getAnonTableName();
 }
 
+bool
+Analysis::loadSaltsFromJsonDOM(const rapidjson::Document &doc, const std::string &val) {
+	/**
+	 * TODO: Implement via Json parser document. Refer to rapidjson official guide.
+	 */
+	return true;
+}
+
 std::string Analysis::getAnonIndexName(const std::string &db,
                                        const std::string &table,
                                        const std::string &index_name,

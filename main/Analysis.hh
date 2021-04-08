@@ -8,6 +8,8 @@
 #include <parser/embedmysql.hh>
 #include <parser/stringify.hh>
 
+#include "parser/rapidjson/document.h"
+
 /***************************************************/
 
 extern "C" void *create_embedded_thd(int client_flag);
@@ -396,6 +398,7 @@ public:
      * Once the item is encrypted fully, we should reset the count_table.
      */
     std::map<MyItem, unsigned long long> count_table;
+
     std::map<const Item *, std::unique_ptr<RewritePlan> > rewritePlans;
     std::map<std::string, std::map<const std::string, const std::string>>
         table_aliases;
@@ -409,6 +412,9 @@ public:
     // These functions are prefered to their lower level counterparts.
     bool addAlias(const std::string &alias, const std::string &db,
                   const std::string &table);
+
+    bool loadSaltsFromJsonDOM(const rapidjson::Document &doc, const std::string &value);
+
     OnionMeta &getOnionMeta(const std::string &db,
                             const std::string &table,
                             const std::string &field, onion o) const;
