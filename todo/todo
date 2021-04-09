@@ -6,3 +6,8 @@
 3. How to read / write the salt table from embedded SQL database or just from files?
 4. When and how to add salts to each FH item.
 5. Will the encryption and decryption functions be rewritten to support our transformation of the item. If so, how to rewrite them.
+6. Rewrite Where clause for subqueries, for example:
+	SELECT * FROM T WHERE T.a = (
+	    SELECT a FROM TT WHERE (MAYBE ANOTHER SUBQUERY)
+	);
+> Can be resolved by recursively call the do_rewrite_where function, maybe?
