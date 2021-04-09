@@ -124,6 +124,9 @@ class CItemChooseOrder : public CItemSubtypeST<Item_sum_hybrid, SFT> {
 
         std::vector<std::shared_ptr<RewritePlan> >
             childr_rp({std::shared_ptr<RewritePlan>(gather(*child, a))});
+
+        // TODO: judge if there is any fh columns... This encset definitely doesn't work.
+
         const EncSet needed = ORD_EncSet;
         const EncSet supported = needed.intersect(childr_rp[0]->es_out);
         const std::string why = "min/max";

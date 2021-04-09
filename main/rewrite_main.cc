@@ -1454,7 +1454,19 @@ isDETFunc(const Item_func &item) {
 Item *
 makeItemCondPairs(const Item_func &item, Analysis &a) {
 	if (true == isDETFunc(item)) {
+		// Check if the itme is a subselect_item.
 		Item *const *const args = item.arguments();
+		if (Item::Type::SUBSELECT_ITEM == args[1]->type()) {
+			const st_select_lex *const select_lex =
+			            RiboldMYSQL::get_select_lex(*copyWithTHD(static_cast<Item_subselect *>(args[1])));
+
+			if (select_lex->where) {
+				return typical_do_transform_where(*select_lex->where, a);
+			} else {
+				return copyWithTHD(&item);
+			}
+		}
+
 		const std::string field_name = args[0]->name;
 		const long long val = args[1]->val_int();
 
