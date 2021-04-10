@@ -392,7 +392,11 @@ public:
      * New
      */
 
-    std::map<MyItem, std::vector<Salt>> salt_table;
+    // std::map<MyItem, std::vector<Salt>> salt_table;
+    std::map<Interval, std::vector<Salt>, cmp> salt_table;
+
+    // Each field should has its alpha, k, and p.
+
 
     /**
      * Once the item is encrypted fully, we should reset the count_table.
@@ -413,7 +417,7 @@ public:
     bool addAlias(const std::string &alias, const std::string &db,
                   const std::string &table);
 
-    bool loadSaltsFromJsonDOM(const rapidjson::Document &doc, const std::string &value);
+    unsigned int loadSaltsFromJsonDOM(const rapidjson::Document &doc, const std::string &value);
 
     OnionMeta &getOnionMeta(const std::string &db,
                             const std::string &table,

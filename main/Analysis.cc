@@ -1145,12 +1145,33 @@ Analysis::translateNonAliasPlainToAnonTableName(const std::string &db,
     return tm->getAnonTableName();
 }
 
-bool
+/**
+ * This could be done when Analysis is initialized.
+ */
+unsigned int
 Analysis::loadSaltsFromJsonDOM(const rapidjson::Document &doc, const std::string &val) {
 	/**
 	 * TODO: Implement via Json parser document. Refer to rapidjson official guide.
 	 */
-	return true;
+	const rapidjson::Value &alpha = doc["alpha"];
+	const rapidjson::Value &interval_num = doc["interval_num"];
+	const rapidjson::Value &p = doc["p"]; // The head of tossing a p-biased coin.
+	const rapidjson::Value &items = doc["items"];
+
+	for (rapidjson::SizeType i = 0; i < items.Size(); i++) {
+		auto salt_object = items[i].GetObject();
+
+		for (rapidjson::Value::ConstMemberIterator iter = salt_object.MemberBegin();
+		    iter != salt_object.MemberEnd(); ++iter) {
+			if (0 == val.compare(iter->name.GetString())) {
+				unsigned int i = 0;
+
+				return iter->value.Size();
+			}
+		}
+	}
+
+	return 0;
 }
 
 std::string Analysis::getAnonIndexName(const std::string &db,

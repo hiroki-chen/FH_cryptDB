@@ -1532,11 +1532,9 @@ do_get_salt_count(const std::string &dir, const std::string &file_name,
 	fclose(fp);
 
 	assert(doc.IsObject());
-	const rapidjson::Value& test = doc["a"];
-	assert(test.IsArray());
-	assert(a.loadSaltsFromJsonDOM(doc, val));
 
-	return test.Size();
+	assert(doc["items"].IsArray());
+	return a.loadSaltsFromJsonDOM(doc, val);
 }
 
 struct DirectiveData {

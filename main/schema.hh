@@ -267,6 +267,10 @@ private:
     }
 } SchemaInfo;
 
+/*
+ * FIXME: Maybe useless.
+ */
+
 typedef class MyItem {
 public:
 	std::string getDBName() const {return db_name;}
@@ -313,6 +317,30 @@ private:
 	Item_int * item_int;
 	Item_float * item_float;
 } MyItem;
+
+typedef class Interval {
+public:
+	Interval() = delete;
+
+	Interval(const double &left, const double &right) :
+			left(left), right(right) {}
+
+	double getLeft() const {return left;}
+
+	double getRight() const {return right;}
+
+private:
+	const double left;
+	const double right;
+
+} Interval;
+
+struct cmp {
+	bool operator () (const Interval &lhs, const Interval &rhs) const {
+		return lhs.getLeft() < rhs.getRight() ||
+				(lhs.getLeft() == rhs.getLeft() && lhs.getRight() < rhs.getRight());
+	}
+};
 
 
 bool
