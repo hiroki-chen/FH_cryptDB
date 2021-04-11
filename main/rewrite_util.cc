@@ -725,6 +725,17 @@ resultEpilogue(const ProxyState &ps, const QueryRewrite &qr,
     return res;
 }
 
+std::pair<unsigned int, unsigned int>
+getIntervalForItem(const unsigned int& interval_num,
+					const std::pair<unsigned int, unsigned int> &range,
+					const double& value)
+{
+	unsigned int begin = range.first, end = range.second;
+	unsigned int length = std::ceil((end - begin) * 1.0 / interval_num);
+
+	unsigned int interval_index = std::floor((value - begin) * 1.0 / length);
+	return std::make_pair(begin + interval_index * length, begin + (interval_index + 1) * length);
+}
 static bool
 lowLevelGetCurrentStaleness(const std::unique_ptr<Connect> &e_conn,
                             unsigned int cache_id)

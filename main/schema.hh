@@ -267,6 +267,39 @@ private:
     }
 } SchemaInfo;
 
+typedef class VariableLocator {
+public:
+	VariableLocator() = delete;
+
+	VariableLocator(const std::string &_db_name, const std::string &_table_name, const std::string &_field_name) :
+		db_name(_db_name), table_name(_table_name), field_name(_field_name) {}
+
+	std::string getDBName() const {return db_name;}
+
+	std::string getTableName() const {return table_name;}
+
+	std::string getFieldName() const {return field_name;}
+
+private:
+	const std::string db_name;
+	const std::string table_name;
+	const std::string field_name;
+} VariableLocator;
+
+struct VLCmp {
+	bool operator() (const VariableLocator &lhs, const VariableLocator &rhs) const {
+		if (lhs.getDBName() != rhs.getDBName()) {
+			return false;
+		} else if (lhs.getTableName() != rhs.getTableName()) {
+			return false;
+		} else if (lhs.getFieldName() != rhs.getFieldName()) {
+			return false;
+		} else {
+			return true;
+		}
+	}
+};
+
 /*
  * FIXME: Maybe useless.
  */
@@ -337,7 +370,7 @@ private:
 
 struct cmp {
 	bool operator () (const Interval &lhs, const Interval &rhs) const {
-		return lhs.getLeft() < rhs.getRight() ||
+		return lhs.getLeft() < rhs.getLeft() ||
 				(lhs.getLeft() == rhs.getLeft() && lhs.getRight() < rhs.getRight());
 	}
 };

@@ -1383,7 +1383,6 @@ do_transform_where(const LEX &lex, Analysis &a) {
 Item *
 typical_do_transform_where(const Item &item, Analysis &a) {
 	if (Item::Type::FUNC_ITEM == item.type()) {
-		Item_func *const item_func = copyWithTHD(&static_cast<const Item_func&>(item));
 		// assert(2 == item_func->arg_count);
 		return makeItemCondPairs(static_cast<const Item_func &>(item), a);
 	}
@@ -1492,7 +1491,6 @@ makeItemCondPairs(const Item_func &item, Analysis &a) {
 unsigned long long
 getSaltCount(const std::string &db_name, const std::string &table_name, const std::string &field_name,
 			   const std::string &val, Analysis &a) {
-	unsigned long long count = 0;
 	// Create a directory for the storage of salt table.
 	std::string dir = "CryptDB_DATA/";
 	dir.append(db_name + '/');
@@ -1533,8 +1531,11 @@ do_get_salt_count(const std::string &dir, const std::string &file_name,
 
 	assert(doc.IsObject());
 
-	assert(doc["items"].IsArray());
-	return a.loadSaltsFromJsonDOM(doc, val);
+	assert(doc["salts"].IsArray());
+	// If salts not found, then we should load it to the Analysis.
+	unsigned int count;
+	assert((count = a.loadSaltsFromJsonDOM(doc, val)) != 0);
+	return count;
 }
 
 struct DirectiveData {

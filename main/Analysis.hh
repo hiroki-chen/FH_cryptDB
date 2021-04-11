@@ -393,10 +393,10 @@ public:
      */
 
     // std::map<MyItem, std::vector<Salt>> salt_table;
-    std::map<Interval, std::vector<Salt>, cmp> salt_table;
+    std::map<Interval, std::vector<Salt *>, cmp> salt_table;
 
     // Each field should has its alpha, k, and p.
-
+    std::map<VariableLocator, std::vector<double>, VLCmp> variables;
 
     /**
      * Once the item is encrypted fully, we should reset the count_table.

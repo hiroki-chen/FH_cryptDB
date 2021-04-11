@@ -67,6 +67,11 @@ createAndRewriteField(Analysis &a, const ProxyState &ps,
                       List<Create_field> &rewritten_cfield_list,
 					  std::string plain_table_name = "");
 
+std::pair<unsigned int, unsigned int>
+getIntervalForItem(const unsigned int& interval_num,
+					const std::pair<unsigned int, unsigned int> &range,
+					const double& value);
+
 Item *
 encrypt_item_layers(const Item &i, onion o, const OnionMeta &om,
                     const Analysis &a, uint64_t IV = 0);

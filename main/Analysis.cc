@@ -1153,21 +1153,53 @@ Analysis::loadSaltsFromJsonDOM(const rapidjson::Document &doc, const std::string
 	/**
 	 * TODO: Implement via Json parser document. Refer to rapidjson official guide.
 	 */
-	const rapidjson::Value &alpha = doc["alpha"];
+	const std::string db_name = doc["db_name"].GetString();
+	const std::string table_name = doc["table_name"].GetString();
+	const std::string field_name = doc["field_name"].GetString();
+
 	const rapidjson::Value &interval_num = doc["interval_num"];
+
+	std::vector<double> params;
+
+	const rapidjson::Value &alpha = doc["alpha"];
+	params.push_back(alpha.GetDouble());
+	params.push_back(interval_num.GetDouble());
 	const rapidjson::Value &p = doc["p"]; // The head of tossing a p-biased coin.
-	const rapidjson::Value &items = doc["items"];
+	params.push_back(p.GetDouble());
+	const rapidjson::Value &range = doc["range"];
 
-	for (rapidjson::SizeType i = 0; i < items.Size(); i++) {
-		auto salt_object = items[i].GetObject();
+	unsigned int range_begin = range[0].GetUint();
+	unsigned int range_end = range[1].GetUint();
+	params.push_back(range_begin);
+	params.push_back(range_end);
 
-		for (rapidjson::Value::ConstMemberIterator iter = salt_object.MemberBegin();
-		    iter != salt_object.MemberEnd(); ++iter) {
-			if (0 == val.compare(iter->name.GetString())) {
-				unsigned int i = 0;
+	variables[VariableLocator(db_name, table_name, field_name)] = std::move(params);
 
-				return iter->value.Size();
+
+	const rapidjson::Value &salts = doc["salts"];
+	for (rapidjson::SizeType i = 0; i < salts.Size(); i++) {
+		auto salt_object = salts[i].GetObject();
+		unsigned int begin = salt_object["begin"].GetUint();
+		unsigned int end = salt_object["end"].GetUint();
+
+		auto interval = getIntervalForItem(interval_num.GetUint(), std::make_pair(range_begin, range_end), stod(val));
+
+		if (begin == interval.first && end == interval.second) {
+			for (auto& i : salt_object["content"].GetArray()) {
+				const rapidjson::Value& salt_content = i.GetObject();
+
+				for (auto it = salt_content.MemberBegin(); it != salt_content.MemberEnd(); it++) {
+					const unsigned int count = it->value.GetUint();
+					const std::string salt_name = it->name.GetString();
+					salt_table[Interval(begin, end)].push_back(new Salt(count, salt_name));
+				}
 			}
+
+			for (auto i : salt_table[Interval(begin, end)]) {
+				std::cout << i->getSaltName() <<  std::endl;
+			}
+
+			return salt_object["content"].Size();
 		}
 	}
 
