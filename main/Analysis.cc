@@ -1,3 +1,5 @@
+#include <memory>
+
 #include <main/Analysis.hh>
 #include <main/rewrite_util.hh>
 #include <main/rewrite_main.hh>
@@ -1191,12 +1193,12 @@ Analysis::loadSaltsFromJsonDOM(const rapidjson::Document &doc, const std::string
 				for (auto it = salt_content.MemberBegin(); it != salt_content.MemberEnd(); it++) {
 					const unsigned int count = it->value.GetUint();
 					const std::string salt_name = it->name.GetString();
-					salt_table[Interval(begin, end)].push_back(new Salt(count, salt_name));
+					salt_table[Interval(begin, end)].push_back(std::unique_ptr<Salt>(new Salt(count, salt_name)));
 				}
 			}
 
-			for (auto i : salt_table[Interval(begin, end)]) {
-				std::cout << i->getSaltName() <<  std::endl;
+			for (auto &i : salt_table[Interval(begin, end)]) {
+				std::cout <<i.get()->getSaltName() <<  std::endl;
 			}
 
 			return salt_object["content"].Size();

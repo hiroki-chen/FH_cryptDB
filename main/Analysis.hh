@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <memory>
 #include <util/onions.hh>
 #include <util/cryptdb_log.hh>
 #include <main/schema.hh>
@@ -393,7 +394,8 @@ public:
      */
 
     // std::map<MyItem, std::vector<Salt>> salt_table;
-    std::map<Interval, std::vector<Salt *>, cmp> salt_table;
+    // Avoid memory leakage...
+    std::map<Interval, std::vector<std::unique_ptr<Salt>>, cmp> salt_table;
 
     // Each field should has its alpha, k, and p.
     std::map<VariableLocator, std::vector<double>, VLCmp> variables;
