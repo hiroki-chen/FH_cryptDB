@@ -11,3 +11,31 @@
 	    SELECT a FROM TT WHERE (MAYBE ANOTHER SUBQUERY)
 	);
 > Can be resolved by recursively call the do_rewrite_where function, maybe?
+
+-----------UPDATE------------
+
+[beginpoint, endpoint] -> ["123", "456"]
+A map from interval to a vector containing salts.
+
+1. Support SUBSELECT Query but we cannot rewrite it with encryption because sub-select clause needs PLAIN_ENCSET, while frequency-smoothing method requires at least FH-DET encset. When do_gather is called for sub-select, an exception will be thrown.
+
+> Maybe we can adjust the rewrite logic for sub-select clause.
+
+2. Rewrite For INSERT INTO DML Query.
+	> In typical_do_rewrite_insert_type function: judge first if we need a new salt or 
+	  randomly choose an old salt from salt table in Analysis;
+	> Update the salt table;
+	> Rewrite the constant with corresponding salt. HACKY: append it after the stringyfied item.
+	> If finished, update the local salt table stored on the client side;
+
+3. Rewrite For SELECT FROM WHERE Query. Note that no where SELECT is trivial to handle.
+	> Look up the salt table stored in Analysis, and maintain a counter for each fh item;
+	> When the inferface of encryption for fh items is called, then increment the corresponding counter.
+
+4. Rewrite FOR DELETE FROM WHERE Query.
+	> Wait until Rewriter gathers the information and we intercept in the rewrite function.
+	> First we need to issue a SELECT FROM WHERE Query to the mysql server side because we have to know how 	  many rows are affected, and accordingly, we could update the salt_table; Potential trouble: rollback? 	  So we need to maintain a delta for salt table and wait until the DBMS finishes the query and 	
+	  returns no exception;
+	> Issue the delete query to the DBMS;
+	> Update the salt table;
+	> Write it to the file, if not failed;
