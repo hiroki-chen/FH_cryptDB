@@ -1,4 +1,5 @@
 #include <memory>
+#include <random>
 
 #include <main/rewrite_util.hh>
 #include <main/rewrite_main.hh>
@@ -503,6 +504,9 @@ encrypt_item_all_onions(const Item &i, const FieldMeta &fm,
     }
 }
 
+/**
+ * TODO: Update salt table by tossing a coin.
+ */
 void
 typical_rewrite_insert_type(const Item &i, const FieldMeta &fm,
                             Analysis &a, std::vector<Item *> *l)
@@ -511,6 +515,10 @@ typical_rewrite_insert_type(const Item &i, const FieldMeta &fm,
     const uint64_t salt = fm.getHasSalt() ? randomValue() : 0;
     //const uint64_t salt = fm.fname.substr(0, 3).compare(FH_IDENTIFIER) == 0 ? randomValue() : 0;
     // Obviously salts are added to the RND level..
+
+    // Determine i's type;
+    // Get a salt (or generate one) if fm.fname contains "fh_";
+    // Update a's salt table by calling its interface.
 
     encrypt_item_all_onions(i, fm, salt, a, l);
 
@@ -630,6 +638,7 @@ printEC(std::unique_ptr<Connect> e_conn, const std::string & command) {
 }
 */
 
+
 static void
 printEmbeddedState(const ProxyState &ps) {
 /*
@@ -723,6 +732,17 @@ resultEpilogue(const ProxyState &ps, const QueryRewrite &qr,
     }
 
     return res;
+}
+
+/**
+ * Toss a p-biased coin to decide if we need to generate a new salt.
+ */
+bool
+tossACoin(const double &p) {
+	std::bernoulli_distribution dist(1 - p);
+	std::random_device rd;
+	std::mt19937 engine(rd());
+	return dist(engine);
 }
 
 std::pair<unsigned int, unsigned int>

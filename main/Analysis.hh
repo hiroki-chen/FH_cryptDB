@@ -383,7 +383,7 @@ class Analysis {
 public:
     Analysis(const std::string &default_db, const SchemaInfo &schema)
         : pos(0), special_update(false), db_name(default_db),
-          schema(schema) {}
+          schema(schema)  {}
 
     unsigned int pos; // > a counter indicating how many projection
                       // fields have been analyzed so far
@@ -393,17 +393,21 @@ public:
      * New
      */
 
+    std::string table_name_last_used;
+
     // std::map<MyItem, std::vector<Salt>> salt_table;
     // Avoid memory leakage...
     std::map<Interval, std::vector<std::unique_ptr<Salt>>, cmp> salt_table;
 
-    // Each field should has its alpha, k, and p.
+    // Each field should has its alpha 0, interval_num 1, and p 2, salt_length 3, begin 4, end 5...
     std::map<VariableLocator, std::vector<double>, VLCmp> variables;
 
     /**
      * Once the item is encrypted fully, we should reset the count_table.
      */
-    std::map<MyItem, unsigned long long> count_table;
+    std::map<MyItem, unsigned long long, MyItem::MyCompare> count_table;
+
+    // FIXME: make them private would be better.
 
     std::map<const Item *, std::unique_ptr<RewritePlan> > rewritePlans;
     std::map<std::string, std::map<const std::string, const std::string>>

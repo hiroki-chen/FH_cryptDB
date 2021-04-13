@@ -37,6 +37,8 @@ CItemSumFuncDir sumFuncTypes = CItemSumFuncDir();
  * are not contained in SELECT queries. Refer to Name_resolution_context
  * definition for more information.
  */
+
+/*
 static std::string
 deductPlainTableName(const std::string &field_name,
                      Name_resolution_context *const context,
@@ -59,7 +61,7 @@ deductPlainTableName(const std::string &field_name,
     } while (current_table != context->last_name_resolution_table);
 
     return deductPlainTableName(field_name, context->outer_context, a);
-}
+}*/
 
 class ANON : public CItemSubtypeIT<Item_field, Item::Type::FIELD_ITEM> {
     virtual RewritePlan *
@@ -72,7 +74,6 @@ class ANON : public CItemSubtypeIT<Item_field, Item::Type::FIELD_ITEM> {
             i.table_name ? i.table_name :
                             deductPlainTableName(i.field_name,
                                                  i.context, a);
-
  
         FieldMeta &fm =
             a.getFieldMeta(a.getDatabaseName(), table, fieldname);
@@ -97,6 +98,8 @@ class ANON : public CItemSubtypeIT<Item_field, Item::Type::FIELD_ITEM> {
             i.table_name ? i.table_name :
                             deductPlainTableName(i.field_name,
                                                  i.context, a);
+        a.table_name_last_used = "";
+        a.table_name_last_used = plain_table_name;
         const FieldMeta &fm =
             a.getFieldMeta(db_name, plain_table_name, i.field_name);
         //assert(constr.key == fm);

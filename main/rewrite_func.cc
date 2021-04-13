@@ -248,8 +248,13 @@ class CItemCompare : public CItemSubtypeFT<Item_func, FT> {
         LOG(cdb_v) << "CItemCompare (L1139) do_gather func " << i;
         std::cout << "CItemCompare (L1139) do_gather for " << i << std::endl;
         Item *const *const args = i.arguments();
-        const std::string name = args[0]->name;
+
+        Item_field *const item_field = static_cast<Item_field *const>(copyWithTHD(args[0]));
+
+        const std::string name = item_field->name;
         bool need_fh = !name.substr(0, 3).compare(FH_IDENTIFIER);
+
+        //std::cout << item_field->table_name << std::endl;
 
         std::string why;
 
@@ -296,6 +301,7 @@ class CItemCompare : public CItemSubtypeFT<Item_func, FT> {
                    << EncSet(constr) << std::endl;
         std::cout << "do_rewrite_type Item_func " << i << std::endl;
         TEST_BadItemArgumentCount(i.type(), 2, i.argument_count());
+
         return rewrite_args_FN(i, constr,
                                static_cast<const RewritePlanOneOLK &>(rp),
                                a);

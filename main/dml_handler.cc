@@ -42,7 +42,10 @@ handleUpdateType(SIMPLE_UPDATE_TYPE update_type, const EncSet &es,
                  const Item_field &field_item, const Item &value_item,
                  List<Item> *const res_fields,
                  List<Item> *const res_values, Analysis &a);
-
+/**
+ * TODO: While inserting new items into FH-columns, we need to also insert (new) salts or increment salt counts if needed,
+ * 	      and then we should write these information into local json file.
+ */
 template <typename ContainerType>
 void rewriteInsertHelper(const Item &i, const FieldMeta &fm, Analysis &a,
                          ContainerType *const append_list)
@@ -55,23 +58,9 @@ void rewriteInsertHelper(const Item &i, const FieldMeta &fm, Analysis &a,
 		    std::vector<Item *> l;
 		    itemTypes.do_rewrite_insert(i, fm, a, &l);
 		    for (auto it : l) {
-		    	//std::cout << "Item->str_value: " << it->str_value << std::endl;
-		    	//std::cout << "Item->str_value size: " << it->str_value.length() << std::endl;
-				//std::cout << "Item->str_value type: " << it->type() << std::endl; // 对VARBINARY编码
-				int item_type = it->type();
-		    	if(item_type == 3){
-		    		//std::cout << "Item->str_value decode: " <<  decode << std::endl; // 对VARBINARY编码
-		    		//std::cout << "Item->str_value decode size: " << strlen(decode) << std::endl; // 对VARBINARY编码
-		    	}
-		    	//std::cout << "Item->str_value encode: " << it->str_value << std::endl;
-		    	//std::cout << "Item->str_value encode size: " << it->str_value.length() << std::endl;
 		        append_list->push_back(it);
 		    }
 	} else {
-		/*
-		 * For debug**
-		 */
-		//std::cout << "Row value is:" << i.name << std::endl;
 		append_list->push_back(copyWithTHD(&i));
 	}
 }

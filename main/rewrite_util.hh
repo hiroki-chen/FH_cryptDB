@@ -36,6 +36,30 @@ rewrite_table_list(List<TABLE_LIST> tll, Analysis &a);
 RewritePlan *
 gather(const Item &i, Analysis &a);
 
+static std::string
+deductPlainTableName(const std::string &field_name,
+                     Name_resolution_context *const context,
+                     Analysis &a)
+{
+    assert(context);
+
+    const TABLE_LIST *current_table =
+        context->first_name_resolution_table;
+    do {
+        TEST_DatabaseDiscrepancy(current_table->db, a.getDatabaseName());
+        const TableMeta &tm =
+            a.getTableMeta(current_table->db,
+                           current_table->table_name);
+        if (tm.childExists(IdentityMetaKey(field_name))) {
+            return std::string(current_table->table_name);
+        }
+
+        current_table = current_table->next_local;
+    } while (current_table != context->last_name_resolution_table);
+
+    return deductPlainTableName(field_name, context->outer_context, a);
+}
+
 void
 gatherAndAddAnalysisRewritePlan(const Item &i, Analysis &a, const Item * original = nullptr);
 
@@ -71,6 +95,9 @@ std::pair<unsigned int, unsigned int>
 getIntervalForItem(const unsigned int& interval_num,
 					const std::pair<unsigned int, unsigned int> &range,
 					const double& value);
+
+bool
+tossACoin(const double &p);
 
 Item *
 encrypt_item_layers(const Item &i, onion o, const OnionMeta &om,

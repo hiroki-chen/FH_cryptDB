@@ -288,14 +288,14 @@ private:
 
 struct VLCmp {
 	bool operator() (const VariableLocator &lhs, const VariableLocator &rhs) const {
-		if (lhs.getDBName() != rhs.getDBName()) {
-			return false;
-		} else if (lhs.getTableName() != rhs.getTableName()) {
-			return false;
-		} else if (lhs.getFieldName() != rhs.getFieldName()) {
-			return false;
-		} else {
+		if (lhs.getDBName() < rhs.getDBName()) {
 			return true;
+		} else if (lhs.getTableName() < rhs.getTableName()) {
+			return true;
+		} else if (lhs.getFieldName() < rhs.getFieldName()) {
+			return true;
+		} else {
+			return false;
 		}
 	}
 };
@@ -306,19 +306,21 @@ struct VLCmp {
 
 typedef class MyItem {
 public:
+	MyItem() = delete;
+
+	MyItem(const std::string& db_name,
+			const std::string &table_name,
+	        const std::string &field_name,
+			const double& val) :
+				db_name(db_name), table_name(table_name), field_name(field_name), val(val)
+	{}
+
 	std::string getDBName() const {return db_name;}
 
 	std::string getTableName() const {return table_name;}
 
 	std::string getFieldName() const {return field_name;}
 
-	Item_num * getItem() const {
-		if (nullptr == item_int) {
-			return item_float;
-		} else {
-			return item_int;
-		}
-	}
 
 	struct MyCompare {
 		bool operator() (const MyItem& lhs, const MyItem& rhs) const {
@@ -334,42 +336,55 @@ public:
 		}
 	};
 
-	double getValue() const;
+	double getValue() const {return val;}
 
 private:
-	MyItem() = delete;
-
-	MyItem(const std::string& db_name,
-			const std::string &table_name,
-	        const std::string &field_name,
-			Item *const item);
-
 	const std::string db_name;
 	const std::string table_name;
 	const std::string field_name;
-	Item_int * item_int;
-	Item_float * item_float;
+	const double val;
 } MyItem;
 
 typedef class Interval {
 public:
 	Interval() = delete;
 
-	Interval(const double &left, const double &right) :
-			left(left), right(right) {}
+	Interval(const double &left, const double &right,
+			const std::string &db_name, const std::string &table_name,
+			const std::string &field_name) :
+				left(left), right(right), db_name(db_name),
+				table_name(table_name), field_name(field_name)
+		{}
 
 	double getLeft() const {return left;}
 
 	double getRight() const {return right;}
 
+	std::string getDBName() const {return db_name;}
+
+	std::string getTableName() const {return table_name;}
+
+	std::string getFieldName() const {return field_name;}
+
 private:
 	const double left;
 	const double right;
+	const std::string db_name;
+	const std::string table_name;
+	const std::string field_name;
 
 } Interval;
 
 struct cmp {
 	bool operator () (const Interval &lhs, const Interval &rhs) const {
+		if (lhs.getDBName() < rhs.getDBName()) {
+			return true;
+		} else if (lhs.getTableName() < rhs.getTableName()) {
+			return true;
+		} else if (lhs.getFieldName() < rhs.getFieldName()) {
+			return true;
+		}
+
 		return lhs.getLeft() < rhs.getLeft() ||
 				(lhs.getLeft() == rhs.getLeft() && lhs.getRight() < rhs.getRight());
 	}

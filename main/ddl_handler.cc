@@ -27,7 +27,14 @@ class CreateTableHandler : public DDLHandler {
         // doesn't exist.
         if (false == a.tableMetaExists(db_name, table)) {
             // TODO: Use appropriate values for has_sensitive and has_salt.
-            std::unique_ptr<TableMeta> tm(new TableMeta(true, true));
+        	std::unique_ptr<TableMeta> tm;
+        	// If table name begind with "fh_", then it has no salt (which is implemented by CryptDB default)
+        	if (0 == table.compare(FH_IDENTIFIER)) {
+        		tm = std::move(std::unique_ptr<TableMeta>(new TableMeta(true, false)));
+        	} else {
+        		tm = std::move(std::unique_ptr<TableMeta>(new TableMeta(true, true)));
+        	}
+
 
             // -----------------------------
             //         Rewrite TABLE       
@@ -50,6 +57,10 @@ class CreateTableHandler : public DDLHandler {
 
             auto it =
                 List_iterator<Create_field>(lex->alter_info.create_list);
+
+            /**
+             * TODO: How do we determine the range of a certain field for frequency smoothing?
+             */
 
             new_lex->alter_info.create_list =
                 accumList<Create_field>(it,

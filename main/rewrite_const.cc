@@ -31,7 +31,51 @@ encrypt_item(const Item &i, const OLK &olk, Analysis &a)
 {
     assert(!RiboldMYSQL::is_null(i));
 
+    // Fetch the database name, table name.
+
     FieldMeta * const fm = olk.key;
+    const std::string db_name = a.getDatabaseName();
+    const std::string field_name = fm->fname;
+    const std::string& table_name = a.table_name_last_used;
+
+    salt_type IV = 0;
+
+    if (0 == field_name.substr(0, 3).compare(FH_IDENTIFIER)) {
+    	std::vector<double> params = a.variables[VariableLocator(db_name, table_name, field_name)];
+    	/**
+    	 * If there is no parameter vector, or the size is not 6, for this item, then something must have gone wrong.
+    	 */
+    	assert(6 == params.size());
+
+    	unsigned int interval_num = params[1];
+    	unsigned int left = params[4];
+    	unsigned int right = params[5];
+    	double val;
+
+    	if (Item::Type::INT_ITEM == i.type()) { // Test.
+    		val = RiboldMYSQL::val_uint(i);
+    	}
+
+    	MyItem sd = MyItem(db_name, table_name, field_name, RiboldMYSQL::val_real(i));
+    	std::cout << "sd: " << sd.getValue();
+    	unsigned int pos = a.count_table[sd]++;
+
+    	std::pair<unsigned int, unsigned int> itv =
+    			getIntervalForItem(interval_num, std::make_pair(left, right), val);
+
+    	std::vector<std::unique_ptr<Salt>>& salt_table =
+    			a.salt_table[Interval(itv.first, itv.second, db_name, table_name, field_name)];
+
+    	// TODO: reset count.
+    	if (pos + 1 == salt_table.size()) {
+    		a.count_table[MyItem(db_name, table_name, field_name, RiboldMYSQL::val_real(i))] = 0;
+    	}
+
+    	assert(pos < salt_table.size());
+    	IV = stoull(salt_table[pos].get()->getSaltName());
+    	std::cout << "IV: " << IV << std::endl;
+    }
+
     // HACK + BROKEN.
     if (!fm && oPLAIN == olk.o) {
         return RiboldMYSQL::clone_item(i);
@@ -42,7 +86,7 @@ encrypt_item(const Item &i, const OLK &olk, Analysis &a)
     LOG(cdb_v) << fm->fname << " " << fm->children.size();
 
     const auto it = a.salts.find(fm);
-    const salt_type IV = (it == a.salts.end()) ? 0 : it->second;
+
     OnionMeta * const om = fm->getOnionMeta(o);
     Item * const ret_i = encrypt_item_layers(i, o, *om, a, IV);
 

@@ -808,7 +808,8 @@ DET_abstract_number::encrypt(const Item &ptext, uint64_t IV) const
     // assert(!stringItem(ptext));
     const ulonglong value = RiboldMYSQL::val_uint(ptext);
 
-    const ulonglong res = static_cast<ulonglong>(bf.encrypt(value+shift));
+    // FIXME: Modified...
+    const ulonglong res = static_cast<ulonglong>(bf.encrypt(value+IV));
     LOG(encl) << "DET_int enc " << value << "--->" << res;
     return new (current_thd->mem_root) Item_int(res);
 }

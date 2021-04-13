@@ -1168,6 +1168,8 @@ Analysis::loadSaltsFromJsonDOM(const rapidjson::Document &doc, const std::string
 	params.push_back(interval_num.GetDouble());
 	const rapidjson::Value &p = doc["p"]; // The head of tossing a p-biased coin.
 	params.push_back(p.GetDouble());
+	const rapidjson::Value &salt_length = doc["salt_length"];
+	params.push_back(salt_length.GetDouble());
 	const rapidjson::Value &range = doc["range"];
 
 	unsigned int range_begin = range[0].GetUint();
@@ -1193,11 +1195,12 @@ Analysis::loadSaltsFromJsonDOM(const rapidjson::Document &doc, const std::string
 				for (auto it = salt_content.MemberBegin(); it != salt_content.MemberEnd(); it++) {
 					const unsigned int count = it->value.GetUint();
 					const std::string salt_name = it->name.GetString();
-					salt_table[Interval(begin, end)].push_back(std::unique_ptr<Salt>(new Salt(count, salt_name)));
+					salt_table[Interval(begin, end, db_name, table_name, field_name)]
+							   .push_back(std::unique_ptr<Salt>(new Salt(count, salt_name)));
 				}
 			}
 
-			for (auto &i : salt_table[Interval(begin, end)]) {
+			for (auto &i : salt_table[Interval(begin, end, db_name, table_name, field_name)]) {
 				std::cout <<i.get()->getSaltName() <<  std::endl;
 			}
 
