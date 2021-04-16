@@ -388,6 +388,9 @@ createAndRewriteField(Analysis &a, const ProxyState &ps,
     };
     std::unique_ptr<FieldMeta> fm(buildFieldMeta(name, cf, ps, tm));
 
+    /**
+     * TODO: create a direcotry for json table first.
+     */
     if (0 == name.substr(0, 3).compare(FH_IDENTIFIER)) {
     	std::string dir = "";
         dir.append(a.getDatabaseName() + '/');
@@ -509,7 +512,7 @@ encrypt_item_all_onions(const Item &i, const FieldMeta &fm,
  */
 void
 typical_rewrite_insert_type(const Item &i, const FieldMeta &fm,
-                            Analysis &a, std::vector<Item *> *l)
+                               Analysis &a, std::vector<Item *> *l)
 {
 	// Test if salts can be added in this function.
     const uint64_t salt = fm.getHasSalt() ? randomValue() : 0;
@@ -520,7 +523,21 @@ typical_rewrite_insert_type(const Item &i, const FieldMeta &fm,
     // Get a salt (or generate one) if fm.fname contains "fh_";
     // Update a's salt table by calling its interface.
 
-    encrypt_item_all_onions(i, fm, salt, a, l);
+	// Fetch its salt.
+
+	const std::string db_name = a.getDatabaseName();
+	const std::string field_name = fm.fname;
+	const std::string& table_name = a.table_name_last_used;
+
+	salt_type IV = 123; // TEST
+
+	if (0 == fm.fname.substr(0, 3).compare(FH_IDENTIFIER)) {
+		encrypt_item_all_onions(i, fm, IV, a, l);;
+	} else {
+		encrypt_item_all_onions(i, fm, salt, a, l);
+	}
+
+
 
     if (0 != salt) {
         l->push_back(new Item_int(static_cast<ulonglong>(salt)));

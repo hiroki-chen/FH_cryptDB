@@ -1470,6 +1470,7 @@ makeItemCondPairs(const Item_func &item, Analysis &a) {
 		const long long val = args[1]->val_int();
 
 		if (0 == field_name.substr(0, 3).compare(FH_IDENTIFIER)) {
+			//FIXME: LOGIC IS WRONG WITH NOT...
 			Item_cond_or *const item_cond_or = new Item_cond_or();
 			const std::string &db_name = a.getDatabaseName();
 			const Item_field *const item_field = static_cast<const Item_field *>(args[0]);

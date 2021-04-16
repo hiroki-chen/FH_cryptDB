@@ -12,6 +12,7 @@
 #include <util/zz.hh>
 
 #include <cmath>
+#include <bitset>
 #include <memory>
 
 #define LEXSTRING(cstr) { (char*) cstr, sizeof(cstr) }
@@ -566,7 +567,7 @@ public:
     virtual SECLEVEL level() const = 0;
 
     std::string doSerialize() const;
-    Create_field *newCreateField(const Create_field *const cf,
+    virtual Create_field *newCreateField(const Create_field *const cf,
                                  const std::string &anonname = "")
         const;
 
@@ -624,12 +625,30 @@ public:
 
 class FH_DET_int : public DET_abstract_integer {
 public:
-	FH_DET_int(Create_field *const cf, const std::string &seed_key);
-	    // create object from serialized contents
+	Create_field * newCreateField(const Create_field * const cf,
+                                  const std::string &anonname = "")
+	        const;
+
+	Item *encrypt(const Item &ptext, uint64_t IV) const;
+	Item *decrypt(Item *const, uint64_t salt_length) const;
+	Item *decryptUDF(Item * const col, Item * const ivcol = NULL)
+	        const;
+
+    // create object from serialized contents
 	FH_DET_int(unsigned int id, const std::string &serial);
 
-    virtual SECLEVEL level() const {return SECLEVEL::FHDET;}
+	FH_DET_int(Create_field *const f, const std::string &seed_key);
+
+    SECLEVEL level() const {return SECLEVEL::FHDET;}
     std::string name() const {return "FH_DET_int";}
+
+    //std::string doSerialize() const {return rawkey;}
+
+protected:
+    const std::string rawkey;
+    static const int key_bytes = 16;
+    AES_KEY const * const enckey;
+    AES_KEY const * const deckey;
 };
 
 static udf_func u_decDETInt = {
@@ -809,7 +828,7 @@ DET_abstract_number::encrypt(const Item &ptext, uint64_t IV) const
     const ulonglong value = RiboldMYSQL::val_uint(ptext);
 
     // FIXME: Modified...
-    const ulonglong res = static_cast<ulonglong>(bf.encrypt(value+IV));
+    const ulonglong res = static_cast<ulonglong>(bf.encrypt(value+shift));
     LOG(encl) << "DET_int enc " << value << "--->" << res;
     return new (current_thd->mem_root) Item_int(res);
 }
@@ -966,12 +985,69 @@ Item *DET_abstract_decimal::decrypt(Item *const ctext, uint64_t IV) const
 }
 
 FH_DET_int::FH_DET_int(Create_field *const f, const std::string &seed_key)
-	: DET_abstract_integer(f, seed_key)
+		: DET_abstract_integer(f, seed_key), rawkey(prng_expand(seed_key, key_bytes)),
+		  enckey(get_AES_enc_key(rawkey)), deckey(get_AES_dec_key(rawkey))
 {}
 
 FH_DET_int::FH_DET_int(unsigned int id, const std::string &serial)
-    : DET_abstract_integer(id, serial)
+		: DET_abstract_integer(id, serial), rawkey(key), enckey(get_AES_enc_key(rawkey)),
+		    deckey(get_AES_dec_key(rawkey))
 {}
+
+Item*
+FH_DET_int::encrypt(const Item &ptext, uint64_t IV) const {
+    //TODO: should have encrypt_SEM work for any length
+    const uint64_t p = RiboldMYSQL::val_uint(ptext);
+
+    /** How do we append salt to a integer type? Considering the fact that if we convert it to a string and simply
+     *  concatenate it to the back of the stringified integer, then unsigned long long could probably overflow because
+     *  it can only contain 2^64 - 1. Therefore value + salt will easily exceed the maximum length of an unsigned long long
+     *  type.
+     *
+     *  So the only apporach to this issue is to store these high-sensitive data in string type.
+     *
+     *  TODO: Really efficient?
+     */
+
+    std::string str_val = std::to_string(p);
+    str_val.append(std::to_string(IV));
+    const std::string c = encrypt_AES_CMC(str_val, enckey, true);
+    std::cout << "ciphertext: " << c << std::endl;
+
+    return new (current_thd->mem_root) Item_string(make_thd_string(c),
+                                                   c.length(),
+                                                   &my_charset_bin);
+}
+
+Item*
+FH_DET_int::decrypt(Item *const ctext, uint64_t salt_length) const {
+	// TODO: simply strip off the salts from the tail.
+	const std::string enc = ItemToString(*ctext);
+	std::string dec = decrypt_AES_CMC(enc, deckey, true);
+
+	dec = dec.substr(0, dec.size() - 3);
+	std::cout << dec << std::endl;
+
+	return new (current_thd->mem_root) Item_string(make_thd_string(dec),
+	                                                   dec.length(),
+	                                                   &my_charset_bin);
+}
+
+Item*
+FH_DET_int::decryptUDF(Item * const col, Item * const ivcol)const
+{
+	return col;
+}
+
+Create_field *
+FH_DET_int::newCreateField(const Create_field * const cf,
+        const std::string &anonname) const
+{
+	auto typelen = type_len_for_AES_str(enum_field_types::MYSQL_TYPE_VARCHAR, 128, true);
+
+	return createFieldHelper(cf, typelen.second, typelen.first, anonname,
+	                             &my_charset_bin);
+}
 
 DET_int::DET_int(Create_field *const f, const std::string &seed_key)
     : DET_abstract_integer(f, seed_key)

@@ -1,6 +1,8 @@
+#define NOMINMAX
+
 #pragma once
 
-#include <algorithm>
+#undef test
 
 #include <util/util.hh>
 #include <crypto/prng.hh>
@@ -47,7 +49,7 @@ serial_pack(SECLEVEL l, const std::string &name,
 
 class EncLayer : public LeafDBMeta {
 public:
-    virtual ~EncLayer() {}
+    virtual ~EncLayer() {};
     EncLayer() : LeafDBMeta() {}
     EncLayer(unsigned int id) : LeafDBMeta(id) {}
 
