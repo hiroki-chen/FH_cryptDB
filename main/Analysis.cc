@@ -1155,6 +1155,7 @@ Analysis::loadSaltsFromJsonDOM(const rapidjson::Document &doc, const std::string
 	/**
 	 * TODO: Implement via Json parser document. Refer to rapidjson official guide.
 	 */
+	unsigned int ans = 0;
 	const std::string db_name = doc["db_name"].GetString();
 	const std::string table_name = doc["table_name"].GetString();
 	const std::string field_name = doc["field_name"].GetString();
@@ -1177,6 +1178,11 @@ Analysis::loadSaltsFromJsonDOM(const rapidjson::Document &doc, const std::string
 	params.push_back(range_begin);
 	params.push_back(range_end);
 
+	const rapidjson::Value &total_salt_used = doc["total_salt_used"];
+	params.push_back(total_salt_used.GetDouble());
+	const rapidjson::Value &ptext_size = doc["ptext_size"];
+	params.push_back(ptext_size.GetDouble());
+
 	variables[VariableLocator(db_name, table_name, field_name)] = std::move(params);
 
 
@@ -1189,26 +1195,23 @@ Analysis::loadSaltsFromJsonDOM(const rapidjson::Document &doc, const std::string
 		auto interval = getIntervalForItem(interval_num.GetUint(), std::make_pair(range_begin, range_end), stod(val));
 
 		if (begin == interval.first && end == interval.second) {
+			ans = salt_object["content"].Size();
+		}
 			for (auto& i : salt_object["content"].GetArray()) {
 				const rapidjson::Value& salt_content = i.GetObject();
 
 				for (auto it = salt_content.MemberBegin(); it != salt_content.MemberEnd(); it++) {
 					const unsigned int count = it->value.GetUint();
+					std::cout << count << std::endl;
 					const std::string salt_name = it->name.GetString();
+					std::cout << salt_name << std::endl;
 					salt_table[Interval(begin, end, db_name, table_name, field_name)]
 							   .push_back(std::unique_ptr<Salt>(new Salt(count, salt_name)));
 				}
 			}
-
-			for (auto &i : salt_table[Interval(begin, end, db_name, table_name, field_name)]) {
-				std::cout <<i.get()->getSaltName() <<  std::endl;
-			}
-
-			return salt_object["content"].Size();
-		}
 	}
 
-	return 0;
+	return ans;
 }
 
 std::string Analysis::getAnonIndexName(const std::string &db,

@@ -88,6 +88,7 @@ class InsertHandler : public DMLHandler {
 
         const std::string &table =
             lex->select_lex.table_list.first->table_name;
+        a.table_name_last_used = table;
         const std::string &db_name =
             lex->select_lex.table_list.first->db;
         TEST_DatabaseDiscrepancy(db_name, a.getDatabaseName());

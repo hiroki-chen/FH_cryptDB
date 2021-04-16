@@ -36,8 +36,8 @@ class Salt;
  * > Also note that like FieldMeta, OnionMeta's children have an explicit
  *   order that must be encoded.
  */
-std::string getRandomString(const unsigned long &s_length);
-const std::string possible_characters = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz=";
+const std::string possible_characters = "0123456789";
+std::string getRandomString(const unsigned int &length);
 
 typedef class Salt {
 public:
@@ -50,6 +50,8 @@ public:
     	salt_name(_salt_name), count(_count) {}
 
     unsigned long getCount() const {return count;}
+
+    bool incrementCount() {return (count++);}
 
     std::string getSaltName() const {return salt_name;}
 

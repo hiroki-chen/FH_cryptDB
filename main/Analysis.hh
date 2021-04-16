@@ -399,7 +399,7 @@ public:
     // Avoid memory leakage...
     std::map<Interval, std::vector<std::unique_ptr<Salt>>, cmp> salt_table;
 
-    // Each field should has its alpha 0, interval_num 1, and p 2, salt_length 3, begin 4, end 5...
+    // Each field should has its alpha 0, interval_num 1, and p 2, salt_length 3, begin 4, end 5, total 6.
     std::map<VariableLocator, std::vector<double>, VLCmp> variables;
 
     /**

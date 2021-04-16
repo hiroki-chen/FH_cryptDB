@@ -96,6 +96,27 @@ getIntervalForItem(const unsigned int& interval_num,
 					const std::pair<unsigned int, unsigned int> &range,
 					const double& value);
 
+std::string
+getSalt(const Item &item, const double &alpha,
+		 const double &p, const double &interval_num,
+		 const std::pair<unsigned int, unsigned int> &range,
+		 Analysis &a);
+
+std::string
+chooseSalt(std::vector<std::unique_ptr<Salt>> &salts, const double &alpha,
+                const unsigned int &total_salt_used,
+                const unsigned int &ptext_size,
+				Analysis &a, rapidjson::Document &doc);
+
+std::string
+getRandomString(const unsigned int &length);
+
+std::string
+getSalt(std::vector<double> &params, const Item &item,
+		const std::string &db_name, const std::string &table_name,
+		const std::string &field_name,
+		Analysis &a, rapidjson::Document &doc);
+
 bool
 tossACoin(const double &p);
 

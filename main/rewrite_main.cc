@@ -1471,7 +1471,15 @@ makeItemCondPairs(const Item_func &item, Analysis &a) {
 
 		if (0 == field_name.substr(0, 3).compare(FH_IDENTIFIER)) {
 			//FIXME: LOGIC IS WRONG WITH NOT...
-			Item_cond_or *const item_cond_or = new Item_cond_or();
+			Item_cond * item_cond = nullptr;
+
+			// <> should use and.
+			if (Item_func::Functype::NE_FUNC == item.functype()) {
+				item_cond = new Item_cond_and();
+			} else {
+				item_cond = new Item_cond_or();
+			}
+
 			const std::string &db_name = a.getDatabaseName();
 			const Item_field *const item_field = static_cast<const Item_field *>(args[0]);
 			const std::string &table_name = item_field->table_name;
@@ -1479,10 +1487,10 @@ makeItemCondPairs(const Item_func &item, Analysis &a) {
 			unsigned long long salt_count = getSaltCount(db_name, table_name, field_name, std::to_string(val), a);
 			//unsigned long long salt_count = 2;
 			while (salt_count-- >= 1) {
-				item_cond_or->add(copyWithTHD(&item));
+				item_cond->add(copyWithTHD(&item));
 			}
 
-			return item_cond_or;
+			return item_cond;
 		}
 	}
 

@@ -9,6 +9,11 @@
 #include <parser/stringify.hh>
 #include <util/enum_text.hh>
 
+#include "parser/rapidjson/document.h"
+#include "parser/rapidjson/filereadstream.h"
+#include "parser/rapidjson/filewritestream.h"
+#include "parser/rapidjson/writer.h"
+
 extern CItemTypesDir itemTypes;
 
 void
@@ -529,10 +534,46 @@ typical_rewrite_insert_type(const Item &i, const FieldMeta &fm,
 	const std::string field_name = fm.fname;
 	const std::string& table_name = a.table_name_last_used;
 
-	salt_type IV = 123; // TEST
-
 	if (0 == fm.fname.substr(0, 3).compare(FH_IDENTIFIER)) {
-		encrypt_item_all_onions(i, fm, IV, a, l);;
+
+		// Create a rapidjson Document object.
+		rapidjson::Document doc;
+
+		// Read from file.
+		std::string dir = "CryptDB_DATA/";
+		dir.append(db_name + '/');
+		dir.append(table_name + "/");
+		dir.append(field_name + ".json");
+
+		std::cout << "dir: " << dir << std::endl;
+
+		FILE *fp = fopen(dir.c_str(), "r");
+		char read_buffer[65536];
+		rapidjson::FileReadStream frs(fp, read_buffer, sizeof(read_buffer));
+
+		// Parse the file into DOM.
+		doc.ParseStream(frs);
+
+		a.loadSaltsFromJsonDOM(doc, "0");
+
+		std::vector<double> &params = a.variables[VariableLocator(db_name, table_name, field_name)];
+		std::cout << params.size() << std::endl;
+		// TODO: wrap it into a function.
+
+		salt_type IV = stoull(getSalt(params, i, db_name, table_name, field_name, a, doc));
+
+		// TODO: write the document back!
+		encrypt_item_all_onions(i, fm, IV, a, l);
+		char writeBuffer[65536];
+
+		FILE *fo = fopen(dir.c_str(), "w");
+		rapidjson::FileWriteStream fws(fo, writeBuffer, sizeof(writeBuffer));
+
+		rapidjson::Writer<rapidjson::FileWriteStream> writer(fws);
+		doc.Accept(writer);
+
+		fclose(fp);
+		fclose(fo);
 	} else {
 		encrypt_item_all_onions(i, fm, salt, a, l);
 	}
@@ -761,6 +802,77 @@ tossACoin(const double &p) {
 	std::mt19937 engine(rd());
 	return dist(engine);
 }
+
+
+/**
+ * This function is called to get a salt either newly generated or chosen and return to the insert function.
+ */
+std::string
+getSalt(std::vector<double> &params, const Item &item,
+		const std::string &db_name, const std::string &table_name,
+		const std::string &field_name,
+		Analysis &a, rapidjson::Document &doc)
+{
+	const double val = RiboldMYSQL::val_real(item);
+
+	// Fetch parameters from params.
+	// Each field should has its alpha 0, interval_num 1, and p 2, salt_length 3, begin 4, end 5, total 6.
+	const double alpha = params[0];
+	const unsigned int interval_num = (unsigned int)params[1];
+	const double p = params[2];
+	const unsigned int salt_length = (unsigned int)params[3];
+	const std::pair<unsigned int, unsigned int> range =
+			std::make_pair((unsigned int)params[4], (unsigned int)(params[5]));
+
+	auto interval = getIntervalForItem(interval_num, range, val);
+	rapidjson::Value &total_salt_used = doc["total_salt_used"];
+	std::vector<std::unique_ptr<Salt>> &salt_table =
+			a.salt_table[Interval(interval.first, interval.second, db_name, table_name, field_name)];
+
+
+	if (true == tossACoin(p) || salt_table.empty()) {
+		std::cout << "Need new salt" << std::endl;
+		salt_table.push_back(std::unique_ptr<Salt>(new Salt(salt_length)));
+		doc["total_salt_used"]= ++params[6];
+	}
+
+	return chooseSalt(salt_table, alpha, params[6], params[7], a, doc);
+}
+
+std::string
+chooseSalt(std::vector<std::unique_ptr<Salt>> &salts, const double &alpha,
+                const unsigned int &total_salt_used,
+                const unsigned int &ptext_size,
+				Analysis &a, rapidjson::Document &doc)
+{
+	unsigned int limit = salts.size() - 1;
+
+	std::random_device rd;
+	std::mt19937 engine(rd());
+	std::uniform_real_distribution<double> dist(-0.01, limit);
+
+	unsigned int salt_index = 0;
+
+	/**
+	 * Choose a salt at random and meet some requirements.
+	 */
+	while (true) {
+	    salt_index = std::ceil(dist(engine));
+
+	    if ((double) (salts[salt_index].get()->getCount() * 1.0 / salts.size()) <=
+	        (double) (alpha * (ptext_size + 1) /*Because new item added*/ / total_salt_used)) {
+	        break;
+	    }
+	}
+
+	salts[salt_index].get()->incrementCount();
+	/**
+	 * TODO: add a function to manipulate increment of salt count..
+	 */
+	doc["ptext_size"] = doc["ptext_size"].GetUint() + 1;
+	return salts[salt_index].get()->getSaltName();
+}
+
 
 std::pair<unsigned int, unsigned int>
 getIntervalForItem(const unsigned int& interval_num,

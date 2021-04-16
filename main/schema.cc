@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <functional>
 #include <memory>
+#include <random>
 
 #include <parser/lex_util.hh>
 #include <parser/stringify.hh>
@@ -568,4 +569,16 @@ IsMySQLTypeNumeric(enum_field_types t) {
             return true;
         default: return false;
     }
+}
+
+std::string getRandomString(const unsigned int &length) {
+    std::random_device rd;
+    std::mt19937 engine(rd());
+    std::uniform_int_distribution<> dist(0, possible_characters.size() - 1);
+    std::string ret = "";
+    for (unsigned int i = 0; i < length; i++) {
+        unsigned int random_index = dist(engine); //get index between 0 and possible_characters.size()-1
+        ret += possible_characters[random_index];
+    }
+    return ret;
 }

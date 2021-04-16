@@ -45,7 +45,7 @@ encrypt_item(const Item &i, const OLK &olk, Analysis &a)
     	/**
     	 * If there is no parameter vector, or the size is not 6, for this item, then something must have gone wrong.
     	 */
-    	assert(6 == params.size());
+    	assert(8 == params.size());
 
     	unsigned int interval_num = params[1];
     	unsigned int left = params[4];
