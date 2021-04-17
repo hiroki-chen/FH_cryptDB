@@ -91,6 +91,12 @@ createAndRewriteField(Analysis &a, const ProxyState &ps,
                       List<Create_field> &rewritten_cfield_list,
 					  std::string plain_table_name = "");
 
+bool
+needFrequencySmoothing(const std::string &field_name);
+
+bool
+needEncryption(const std::string &field_name);
+
 std::pair<unsigned int, unsigned int>
 getIntervalForItem(const unsigned int& interval_num,
 					const std::pair<unsigned int, unsigned int> &range,
@@ -125,6 +131,12 @@ getSalt(std::vector<double> &params, const Item &item,
 
 uint64_t
 extractSaltLengthFromField(const std::string &field_name);
+
+bool
+writeDomToFile(const rapidjson::Document &doc, const std::string &path);
+
+bool
+getDocumentFromFileAndLoadSalt(const std::string &path, Analysis &a, rapidjson::Document &doc);
 
 bool
 tossACoin(const double &p);

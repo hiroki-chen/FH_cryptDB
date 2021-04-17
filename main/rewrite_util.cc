@@ -396,7 +396,7 @@ createAndRewriteField(Analysis &a, const ProxyState &ps,
     /**
      * TODO: create a direcotry for json table first.
      */
-    if (0 == name.substr(0, 3).compare(FH_IDENTIFIER)) {
+    if (needFrequencySmoothing(name)) {
     	std::string dir = "";
         dir.append(a.getDatabaseName() + '/');
         dir.append(plain_table_name + '/');
@@ -408,8 +408,8 @@ createAndRewriteField(Analysis &a, const ProxyState &ps,
 	std::string e_i = name.substr(0, 4);
 	std::string fh_i = name.substr(0, 3);
 	bool needEnc =
-			!(e_i.compare(ENC_IDENTIFIER)) ||
-			!(fh_i.compare(FH_IDENTIFIER));
+			needFrequencySmoothing(name) ||
+			needEncryption(name);
 
     // -----------------------------
     //         Rewrite FIELD       
@@ -512,6 +512,36 @@ encrypt_item_all_onions(const Item &i, const FieldMeta &fm,
     }
 }
 
+bool
+writeDomToFile(const rapidjson::Document &doc, const std::string &path)
+{
+	char writeBuffer[65536];
+
+	FILE *out_file = fopen(path.c_str(), "w");
+	rapidjson::FileWriteStream fws(out_file, writeBuffer, sizeof(writeBuffer));
+
+	rapidjson::Writer<rapidjson::FileWriteStream> writer(fws);
+	doc.Accept(writer);
+	fclose(out_file);
+
+	return true;
+}
+
+bool
+getDocumentFromFileAndLoadSalt(const std::string &path, Analysis &a, rapidjson::Document &doc)
+{
+	FILE *in_file = fopen(path.c_str(), "r");
+	char read_buffer[65536];
+	rapidjson::FileReadStream frs(in_file, read_buffer, sizeof(read_buffer));
+
+	// Parse the file into DOM.
+	doc.ParseStream(frs);
+	a.loadSaltsFromJsonDOM(doc, "0");
+	fclose(in_file);
+
+	return true;
+}
+
 /**
  * TODO: Update salt table by tossing a coin.
  */
@@ -534,48 +564,26 @@ typical_rewrite_insert_type(const Item &i, const FieldMeta &fm,
 	const std::string field_name = fm.fname;
 	const std::string& table_name = a.table_name_last_used;
 
-	if (0 == fm.fname.substr(0, 3).compare(FH_IDENTIFIER)) {
-
-		// Create a rapidjson Document object.
-		rapidjson::Document doc;
-
+	if (needFrequencySmoothing(field_name)) {
 		// Read from file.
 		std::string dir = "CryptDB_DATA/";
 		dir.append(db_name + '/');
 		dir.append(table_name + "/");
 		dir.append(field_name + ".json");
 
-		FILE *fp = fopen(dir.c_str(), "r");
-		char read_buffer[65536];
-		rapidjson::FileReadStream frs(fp, read_buffer, sizeof(read_buffer));
-
-		// Parse the file into DOM.
-		doc.ParseStream(frs);
-
-		a.loadSaltsFromJsonDOM(doc, "0");
+		rapidjson::Document doc;
+		assert(getDocumentFromFileAndLoadSalt(dir, a, doc));
 
 		std::vector<double> &params = a.variables[VariableLocator(db_name, table_name, field_name)];
-		// TODO: wrap it into a function.
 
 		salt_type IV = stoull(getSalt(params, i, db_name, table_name, field_name, a, doc));
 
 		// TODO: write the document back!
 		encrypt_item_all_onions(i, fm, IV, a, l);
-		char writeBuffer[65536];
-
-		FILE *fo = fopen(dir.c_str(), "w");
-		rapidjson::FileWriteStream fws(fo, writeBuffer, sizeof(writeBuffer));
-
-		rapidjson::Writer<rapidjson::FileWriteStream> writer(fws);
-		doc.Accept(writer);
-
-		fclose(fp);
-		fclose(fo);
+		assert(writeDomToFile(doc, dir));
 	} else {
 		encrypt_item_all_onions(i, fm, salt, a, l);
 	}
-
-
 
     if (0 != salt) {
         l->push_back(new Item_int(static_cast<ulonglong>(salt)));
@@ -629,6 +637,18 @@ extractSaltLengthFromField(const std::string &field_name)
 
 	assert(std::string::npos != pos); // The field name is incorrect.
 	return stoull(field_name.substr(pos + 1, field_name.size()));
+}
+
+bool
+needFrequencySmoothing(const std::string &field_name)
+{
+	return 0 == field_name.substr(0, 3).compare(FH_IDENTIFIER);
+}
+
+bool
+needEncryption(const std::string &field_name)
+{
+	return 0 == field_name.substr(0, 4).compare(ENC_IDENTIFIER);
 }
 
 bool
@@ -835,7 +855,6 @@ getSalt(std::vector<double> &params, const Item &item,
 			a.salt_table[Interval(interval.first, interval.second, db_name, table_name, field_name)];
 
 	if (true == tossACoin(p) || salt_table.empty()) {
-		std::cout << "Need new salt" << std::endl;
 		salt_table.push_back(std::unique_ptr<Salt>(new Salt(salt_length)));
 		doc["total_salt_used"]= ++params[6];
 	}
@@ -868,7 +887,6 @@ writeSaltTableToJsonDOM(rapidjson::Document &doc,
 						count, allocator); // This API is really ugly.
 
 				new_content.PushBack(salt_item, allocator);
-				std::cout << new_content.Size() << std::endl;
 			}
 			rapidjson::Value &salt_content = salt_object["content"];
 			salt_content = new_content;

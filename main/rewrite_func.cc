@@ -251,8 +251,8 @@ class CItemCompare : public CItemSubtypeFT<Item_func, FT> {
 
         Item_field *const item_field = static_cast<Item_field *const>(copyWithTHD(args[0]));
 
-        const std::string name = item_field->name;
-        bool need_fh = !name.substr(0, 3).compare(FH_IDENTIFIER);
+        const std::string fname = item_field->name;
+        bool need_fh = !needFrequencySmoothing(fname);
 
         //std::cout << item_field->table_name << std::endl;
 

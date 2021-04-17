@@ -40,7 +40,7 @@ encrypt_item(const Item &i, const OLK &olk, Analysis &a)
 
     salt_type IV = 0;
 
-    if (0 == field_name.substr(0, 3).compare(FH_IDENTIFIER)) {
+    if (needFrequencySmoothing(field_name)) {
     	std::vector<double> params = a.variables[VariableLocator(db_name, table_name, field_name)];
     	/**
     	 * If there is no parameter vector, or the size is not 6, for this item, then something must have gone wrong.

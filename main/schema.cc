@@ -377,9 +377,8 @@ onionlayout FieldMeta::determineOnionLayout(const AES_KEY *const m_key,
 
 	std::cout << "In determineOnionLayout...\n";
 	std::string fname = f->field_name;
-	bool need_enc = !fname.substr(0, 4).compare(ENC_IDENTIFIER);
-	bool need_fh = !fname.substr(0, 3).compare(FH_IDENTIFIER);
-    if (sec_rating == SECURITY_RATING::PLAIN || (!need_enc && !need_fh)) {
+
+    if (sec_rating == SECURITY_RATING::PLAIN || (!needEncryption(fname) && !needFrequencySmoothing(fname))) {
         // assert(!m_key);
     	LOG(cdb_v) << "hello\n";
         return PLAIN_ONION_LAYOUT;
@@ -405,18 +404,18 @@ onionlayout FieldMeta::determineOnionLayout(const AES_KEY *const m_key,
 
     if (SECURITY_RATING::SENSITIVE == sec_rating) {
         if (true == IsMySQLTypeNumeric(f->sql_type)) {
-            return need_fh ?
+            return needFrequencySmoothing(fname) ?
             		FH_NUM_ONION_LAYOUT : NUM_ONION_LAYOUT;
         } else {
-        	return need_fh ?
+        	return needFrequencySmoothing(fname) ?
         	        FH_STR_ONION_LAYOUT : STR_ONION_LAYOUT;
         }
     } else if (SECURITY_RATING::BEST_EFFORT == sec_rating) {
         if (true == IsMySQLTypeNumeric(f->sql_type)) {
-        	return need_fh ?
+        	return needFrequencySmoothing(fname) ?
         	            	  FH_NUM_ONION_LAYOUT : NUM_ONION_LAYOUT;
         } else {
-        	return need_fh ?
+        	return needFrequencySmoothing(fname) ?
         	        	      FH_STR_ONION_LAYOUT : STR_ONION_LAYOUT;
         }
     } else {

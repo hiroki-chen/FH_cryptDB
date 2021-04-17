@@ -138,8 +138,8 @@ class ANON : public CItemSubtypeIT<Item_field, Item::Type::FIELD_ITEM> {
         	    return make_item_insert_value(insert_i, res);
         	}
 
-        	return fm.fname.substr(0, 4).compare(ENC_IDENTIFIER) == 0 ||
-        			fm.fname.substr(0, 3).compare(FH_IDENTIFIER) == 0  ?
+        	return needFrequencySmoothing(fm.fname) ||
+        			needEncryption(fm.fname)  ?
         			res : plain_res;
 
     }

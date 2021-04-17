@@ -926,7 +926,7 @@ decrypt_item_layers(Item *const i, const FieldMeta *const fm, onion o,
     assert(om);
     const auto &enc_layers = om->layers;
     for (auto it = enc_layers.rbegin(); it != enc_layers.rend(); ++it) {
-    	if (0 == fm->fname.substr(0, 3).compare(FH_IDENTIFIER)) {
+    	if (needFrequencySmoothing(fm->fname)) {
     		// TODO: EXTRACT.
     		dec = (*it)->decrypt(dec, extractSaltLengthFromField(fm->fname));
     	} else {
@@ -1475,7 +1475,7 @@ makeItemCondPairs(const Item_func &item, Analysis &a) {
 		const std::string field_name = args[0]->name;
 		const long long val = args[1]->val_int();
 
-		if (0 == field_name.substr(0, 3).compare(FH_IDENTIFIER)) {
+		if (needFrequencySmoothing(field_name)) {
 			//FIXME: LOGIC IS WRONG WITH NOT...
 			Item_cond * item_cond = nullptr;
 
@@ -1707,8 +1707,8 @@ Rewriter::decryptResults(const ResType &dbres, const ReturnMeta &rmeta)
         if (rf.getIsSalt()) {
             continue;
         }
-        bool needEnc = !(res.names[c].substr(0, 4).compare(ENC_IDENTIFIER)) ||
-        			    !(res.names[c].substr(0, 3).compare(FH_IDENTIFIER));
+        bool needEnc = (needEncryption(res.names[c])) ||
+        			    (needFrequencySmoothing(res.names[c]));
         FieldMeta *const fm = rf.getOLK().key;
         for (unsigned int r = 0; r < rows; r++) {
             if (!fm || dbres.rows[r][c]->is_null()

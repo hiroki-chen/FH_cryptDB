@@ -746,7 +746,7 @@ EncLayer *
 DETFactory::create(Create_field * const cf, const std::string &key)
 {
 	std::string fname = cf->field_name;
-	bool need_fh = !fname.substr(0, 3).compare(FH_IDENTIFIER);
+	bool need_fh = needFrequencySmoothing(fname);
 	std::cout << "invoke det factory?\n";
 
 	if (IsMySQLTypeNumeric(cf->sql_type)) {
