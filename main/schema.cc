@@ -578,7 +578,12 @@ std::string getRandomString(const unsigned int &length) {
     std::string ret = "";
     for (unsigned int i = 0; i < length; i++) {
         unsigned int random_index = dist(engine); //get index between 0 and possible_characters.size()-1
+
+        if (i == 0 && '0' == possible_characters[random_index]) {
+        	continue;
+        }
         ret += possible_characters[random_index];
     }
+
     return ret;
 }

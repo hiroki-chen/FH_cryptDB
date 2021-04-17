@@ -999,7 +999,7 @@ FH_DET_int::encrypt(const Item &ptext, uint64_t IV) const {
     //TODO: should have encrypt_SEM work for any length
     const uint64_t p = RiboldMYSQL::val_uint(ptext);
 
-    /** How do we append salt to a integer type? Considering the fact that if we convert it to a string and simply
+    /** How do we append salt to an integer type? Considering the fact that if we convert it to a string and simply
      *  concatenate it to the back of the stringified integer, then unsigned long long could probably overflow because
      *  it can only contain 2^64 - 1. Therefore value + salt will easily exceed the maximum length of an unsigned long long
      *  type.
@@ -1025,7 +1025,8 @@ FH_DET_int::decrypt(Item *const ctext, uint64_t salt_length) const {
 	const std::string enc = ItemToString(*ctext);
 	std::string dec = decrypt_AES_CMC(enc, deckey, true);
 
-	dec = dec.substr(0, dec.size() - 3);
+	assert(dec.size() >= salt_length);
+	dec = dec.substr(0, dec.size() - salt_length);
 	std::cout << dec << std::endl;
 
 	return new (current_thd->mem_root) Item_string(make_thd_string(dec),

@@ -106,7 +106,13 @@ std::string
 chooseSalt(std::vector<std::unique_ptr<Salt>> &salts, const double &alpha,
                 const unsigned int &total_salt_used,
                 const unsigned int &ptext_size,
+				const std::pair<unsigned int, unsigned int> &interval,
 				Analysis &a, rapidjson::Document &doc);
+
+bool
+writeSaltTableToJsonDOM(rapidjson::Document &doc,
+						const std::pair<unsigned int, unsigned int> &interval,
+						const std::vector<std::unique_ptr<Salt>> &salt_table);
 
 std::string
 getRandomString(const unsigned int &length);
@@ -116,6 +122,9 @@ getSalt(std::vector<double> &params, const Item &item,
 		const std::string &db_name, const std::string &table_name,
 		const std::string &field_name,
 		Analysis &a, rapidjson::Document &doc);
+
+uint64_t
+extractSaltLengthFromField(const std::string &field_name);
 
 bool
 tossACoin(const double &p);

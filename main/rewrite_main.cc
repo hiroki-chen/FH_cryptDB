@@ -926,7 +926,13 @@ decrypt_item_layers(Item *const i, const FieldMeta *const fm, onion o,
     assert(om);
     const auto &enc_layers = om->layers;
     for (auto it = enc_layers.rbegin(); it != enc_layers.rend(); ++it) {
-        dec = (*it)->decrypt(dec, IV);
+    	if (0 == fm->fname.substr(0, 3).compare(FH_IDENTIFIER)) {
+    		// TODO: EXTRACT.
+    		dec = (*it)->decrypt(dec, extractSaltLengthFromField(fm->fname));
+    	} else {
+    		dec = (*it)->decrypt(dec, IV);
+    	}
+
         LOG(cdb_v) << "dec okay";
     }
 
@@ -1555,6 +1561,7 @@ struct DirectiveData {
     DirectiveData(const std::string query)
     {
         std::list<std::string> tokens = split(query, " ");
+        for (auto it : tokens) { std::cout << it << std::endl; }
         assert(tokens.size() == 4);
         tokens.pop_front();
 
@@ -1629,6 +1636,7 @@ Rewriter::rewrite(const ProxyState &ps, const std::string &q,
     // output就是重写后的SQL语句集
     RewriteOutput *output;
     if (cryptdbDirective(q)) { // 不需要进行重写
+    	std::cout << "Directive SQL!\n";
         output = Rewriter::handleDirective(analysis, ps, q);
     } else {
         // NOTE: Care what data you try to read from Analysis

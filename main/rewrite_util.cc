@@ -545,8 +545,6 @@ typical_rewrite_insert_type(const Item &i, const FieldMeta &fm,
 		dir.append(table_name + "/");
 		dir.append(field_name + ".json");
 
-		std::cout << "dir: " << dir << std::endl;
-
 		FILE *fp = fopen(dir.c_str(), "r");
 		char read_buffer[65536];
 		rapidjson::FileReadStream frs(fp, read_buffer, sizeof(read_buffer));
@@ -557,7 +555,6 @@ typical_rewrite_insert_type(const Item &i, const FieldMeta &fm,
 		a.loadSaltsFromJsonDOM(doc, "0");
 
 		std::vector<double> &params = a.variables[VariableLocator(db_name, table_name, field_name)];
-		std::cout << params.size() << std::endl;
 		// TODO: wrap it into a function.
 
 		salt_type IV = stoull(getSalt(params, i, db_name, table_name, field_name, a, doc));
@@ -623,6 +620,15 @@ getDefaultDatabaseForConnection(const std::unique_ptr<Connect> &c)
                           "failed to retrieve default database!");
 
     return out_name;
+}
+
+uint64_t
+extractSaltLengthFromField(const std::string &field_name)
+{
+	auto pos = field_name.find_last_of('_', std::string::npos);
+
+	assert(std::string::npos != pos); // The field name is incorrect.
+	return stoull(field_name.substr(pos + 1, field_name.size()));
 }
 
 bool
@@ -825,10 +831,8 @@ getSalt(std::vector<double> &params, const Item &item,
 			std::make_pair((unsigned int)params[4], (unsigned int)(params[5]));
 
 	auto interval = getIntervalForItem(interval_num, range, val);
-	rapidjson::Value &total_salt_used = doc["total_salt_used"];
 	std::vector<std::unique_ptr<Salt>> &salt_table =
 			a.salt_table[Interval(interval.first, interval.second, db_name, table_name, field_name)];
-
 
 	if (true == tossACoin(p) || salt_table.empty()) {
 		std::cout << "Need new salt" << std::endl;
@@ -836,13 +840,54 @@ getSalt(std::vector<double> &params, const Item &item,
 		doc["total_salt_used"]= ++params[6];
 	}
 
-	return chooseSalt(salt_table, alpha, params[6], params[7], a, doc);
+	return chooseSalt(salt_table, alpha, params[6], params[7], interval, a, doc);
 }
 
+bool
+writeSaltTableToJsonDOM(rapidjson::Document &doc,
+						const std::pair<unsigned int, unsigned int> &interval,
+						const std::vector<std::unique_ptr<Salt>> &salt_table)
+{
+	rapidjson::Value &salts = doc["salts"];
+	assert(salts.IsArray());
+	rapidjson::Document::AllocatorType& allocator = doc.GetAllocator();
+
+	for (rapidjson::SizeType i = 0; i < salts.Size(); i++) {
+		rapidjson::Value &salt_object = salts[i].GetObject();
+
+		if (interval.first == salt_object["begin"].GetUint() && interval.second == salt_object["end"].GetUint()) {
+			// Build an array and move it to the content of the salt.
+			rapidjson::Value new_content(rapidjson::kArrayType);
+
+			for (auto &item : salt_table) {
+				rapidjson::Value salt_item(rapidjson::kObjectType);
+				rapidjson::Value count;
+				count.SetUint(item.get()->getCount());
+				salt_item.AddMember(
+						static_cast<rapidjson::GenericStringRef<char>>(item.get()->getSaltName().c_str()),
+						count, allocator); // This API is really ugly.
+
+				new_content.PushBack(salt_item, allocator);
+				std::cout << new_content.Size() << std::endl;
+			}
+			rapidjson::Value &salt_content = salt_object["content"];
+			salt_content = new_content;
+
+			return true;
+		}
+	}
+
+	return false; // No such salts. Probably some problems happened.
+}
+
+/**
+ * TODO: ADD INTERVAL
+ */
 std::string
 chooseSalt(std::vector<std::unique_ptr<Salt>> &salts, const double &alpha,
                 const unsigned int &total_salt_used,
                 const unsigned int &ptext_size,
+				const std::pair<unsigned int, unsigned int> &interval,
 				Analysis &a, rapidjson::Document &doc)
 {
 	unsigned int limit = salts.size() - 1;
@@ -866,10 +911,10 @@ chooseSalt(std::vector<std::unique_ptr<Salt>> &salts, const double &alpha,
 	}
 
 	salts[salt_index].get()->incrementCount();
-	/**
-	 * TODO: add a function to manipulate increment of salt count..
-	 */
+
 	doc["ptext_size"] = doc["ptext_size"].GetUint() + 1;
+
+	writeSaltTableToJsonDOM(doc, interval, salts);
 	return salts[salt_index].get()->getSaltName();
 }
 
