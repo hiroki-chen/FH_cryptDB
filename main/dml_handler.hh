@@ -25,4 +25,6 @@ protected:
     virtual ~DMLHandler() {;}
 };
 
+std::string generateEquivalentSelectStatement(const LEX *const lex);
+
 SQLDispatcher *buildDMLDispatcher();

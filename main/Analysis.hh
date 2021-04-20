@@ -392,7 +392,7 @@ public:
     /**
      * New
      */
-
+    std::string select_plain_for_update_or_delete;
     std::string table_name_last_used;
 
     // std::map<MyItem, std::vector<Salt>> salt_table;

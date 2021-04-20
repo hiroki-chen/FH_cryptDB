@@ -78,6 +78,9 @@ public:
 void
 printRes(const ResType & r);
 
+ResType
+mysql_noop_res(const ProxyState &ps);
+
 //contains the results of a query rewrite:
 // - rewritten queries
 // - data structure needed to decrypt results

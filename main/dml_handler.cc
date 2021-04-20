@@ -7,6 +7,23 @@
 
 extern CItemTypesDir itemTypes;
 
+
+std::string generateEquivalentSelectStatement(const LEX *const lex)
+{
+	LEX *const new_lex = copyWithTHD(lex);
+
+	std::string select_clause = "SELECT * ";
+	std::ostringstream o;
+	o << *new_lex;
+	std::string delete_clause = o.str();
+	std::cout << delete_clause << std::endl;
+	auto pos = (delete_clause.find("FROM") == std::string::npos) ?
+			delete_clause.find("from") : delete_clause.find("FROM");
+	select_clause.append(delete_clause.substr(pos));
+
+	return select_clause;
+}
+
 // Prototypes.
 static void
 process_field_value_pairs(List_iterator<Item> fd_it,
@@ -273,18 +290,19 @@ class DeleteHandler : public DMLHandler {
     virtual void gather(Analysis &a, LEX *const lex, const ProxyState &ps)
         const
     {
+    	a.select_plain_for_update_or_delete = generateEquivalentSelectStatement(lex);
         process_select_lex(lex->select_lex, a);
     }
 
     virtual LEX *rewrite(Analysis &a, LEX *lex, const ProxyState &ps)
         const
     {
-    	std::cout << "Im rewrite of \"deletehandler\"!!!! " << std::endl;
-        LEX *const new_lex = copyWithTHD(lex);
-        new_lex->query_tables = rewrite_table_list(lex->query_tables, a);
-        set_select_lex(new_lex,
-                       rewrite_select_lex(new_lex->select_lex, a));
+    	LEX *const new_lex = copyWithTHD(lex);
+    	new_lex->query_tables = rewrite_table_list(lex->query_tables, a);
+    	set_select_lex(new_lex, rewrite_select_lex(new_lex->select_lex, a));
 
+    	// Must done after rewriting the delete clause because we need to update return meta for analysis.
+    	assert(issueSelectForDeleteOrUpdate(a, new_lex, ps));
         return new_lex;
     }
 };

@@ -295,6 +295,35 @@ getOriginalKeyName(Key *const key)
     return out_name;
 }
 
+bool
+updateSaltTable(const ResType &dbres, const ReturnMeta &rmeta)
+{
+	const unsigned int row_count = dbres.rows.size();
+	std::cout << "In delete / update: we have detected " << row_count << " rows to be deleted / updated." <<std::endl;
+	return true;
+}
+
+bool
+issueSelectForDeleteOrUpdate(Analysis &a, const LEX *const lex, const ProxyState &ps)
+{
+    std::string select_clause = generateEquivalentSelectStatement(lex);
+    DMLOutput *output = new DMLOutput(a.select_plain_for_update_or_delete, select_clause);
+    std::unique_ptr<QueryRewrite> qr = std::unique_ptr<QueryRewrite>(new QueryRewrite(true, a.rmeta, output));
+    std::unique_ptr<DBResult> dbres;
+
+    std::cout << "select_clause: " << select_clause << std::endl;
+
+    TEST_Sync(ps.getConn()->execute(select_clause, &dbres, qr.get()->output->multipleResultSets()),
+            	                  "failed to execute query for delete / update subquery!!!");
+
+    /** If SQL query within the proxy and the delete handler has not yet issued a rewritten SQL query, we should
+     *  unpack the (forced) issued query.
+     */
+    const ResType &res = dbres.get()->unpack();
+
+    return updateSaltTable(res, qr.get()->rmeta);
+}
+
 std::vector<Key *>
 rewrite_key(const TableMeta &tm, Key *const key, const Analysis &a)
 {
@@ -405,8 +434,7 @@ createAndRewriteField(Analysis &a, const ProxyState &ps,
         system(command.c_str());
      }
 
-	std::string e_i = name.substr(0, 4);
-	std::string fh_i = name.substr(0, 3);
+
 	bool needEnc =
 			needFrequencySmoothing(name) ||
 			needEncryption(name);

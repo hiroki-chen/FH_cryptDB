@@ -1674,6 +1674,7 @@ Rewriter::decryptResults(const ResType &dbres, const ReturnMeta &rmeta)
 {
     const unsigned int rows = dbres.rows.size();
     LOG(cdb_v) << "rows in result " << rows << "\n";
+    std::cout << "rows in result " << rows << std::endl;
     const unsigned int cols = dbres.names.size();
 
     ResType res;
@@ -1736,7 +1737,7 @@ Rewriter::decryptResults(const ResType &dbres, const ReturnMeta &rmeta)
     return res;
 }
 
-static ResType
+ResType
 mysql_noop_res(const ProxyState &ps)
 {
     std::unique_ptr<DBResult> noop_dbres;
@@ -1798,7 +1799,7 @@ executeQuery(const ProxyState &ps, const std::string &q,
      * change
      */
 //    const ResType &res =
-//        dbres ? ResType(dbres->unpack()) : mysql_noop_res(ps);
+//        dbres ? ResType(dbres->unpack()) : mysql_noop_res(ps); ?
     const ResType &res = mysql_noop_res(ps);
     assert(res.success());
     // 进行解密以及输出解密后的结果
@@ -1806,7 +1807,6 @@ executeQuery(const ProxyState &ps, const std::string &q,
     const EpilogueResult epi_result =
         queryEpilogue(ps, *qr.get(), res, q, default_db, pp);
     assert(epi_result.res_type.success());
-
 
     return epi_result;
 }

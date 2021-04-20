@@ -141,6 +141,15 @@ getDocumentFromFileAndLoadSalt(const std::string &path, Analysis &a, rapidjson::
 bool
 tossACoin(const double &p);
 
+/**
+ * When rows are deleted or updated, we must do synchronization.
+ */
+bool
+updateSaltTable(const ResType &dbres, const ReturnMeta &rmeta);
+
+bool
+issueSelectForDeleteOrUpdate(Analysis &a, const LEX *const lex, const ProxyState &ps);
+
 Item *
 encrypt_item_layers(const Item &i, onion o, const OnionMeta &om,
                     const Analysis &a, uint64_t IV = 0);
