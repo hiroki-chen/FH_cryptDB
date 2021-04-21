@@ -67,9 +67,9 @@ template <typename ContainerType>
 void rewriteInsertHelper(const Item &i, const FieldMeta &fm, Analysis &a,
                          ContainerType *const append_list)
 {
-	std::string e_i = fm.fname.substr(0, 4);
-	std::string fh_i = fm.fname.substr(0, 3);
-	bool needEnc = !(e_i.compare(ENC_IDENTIFIER)) || !(fh_i.compare(FH_IDENTIFIER));
+	const std::string fname = fm.fname;
+	bool needEnc = needFrequencySmoothing(fname) || needEncryption(fname);
+	std::cout << "In insert helper: " << needEnc << std::endl;
 
 	if (true == needEnc) {
 		    std::vector<Item *> l;
@@ -78,7 +78,8 @@ void rewriteInsertHelper(const Item &i, const FieldMeta &fm, Analysis &a,
 		        append_list->push_back(it);
 		    }
 	} else {
-		append_list->push_back(copyWithTHD(&i));
+		Item *const new_item = new Item_int(RiboldMYSQL::val_uint(i));
+		append_list->push_back(new_item);
 	}
 }
 

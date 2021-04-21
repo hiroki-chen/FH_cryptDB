@@ -153,6 +153,7 @@ static class ANON : public CItemSubtypeIT<Item_int, Item::Type::INT_ITEM> {
     do_rewrite_insert_type(const Item_int &i, const FieldMeta &fm,
                            Analysis &a, std::vector<Item *> *l) const
     {
+    	std::cout << RiboldMYSQL::val_uint(i) << std::endl;
         typical_rewrite_insert_type(i, fm, a, l);
     }
 } ANON;

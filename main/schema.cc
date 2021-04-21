@@ -378,9 +378,12 @@ onionlayout FieldMeta::determineOnionLayout(const AES_KEY *const m_key,
 	std::cout << "In determineOnionLayout...\n";
 	std::string fname = f->field_name;
 
-    if (sec_rating == SECURITY_RATING::PLAIN || (!needEncryption(fname) && !needFrequencySmoothing(fname))) {
+	bool needEnc = needEncryption(fname) || needFrequencySmoothing(fname);
+
+    if (sec_rating == SECURITY_RATING::PLAIN || !needEnc) {
         // assert(!m_key);
     	LOG(cdb_v) << "hello\n";
+    	std::cout << "plain..." << std::endl;
         return PLAIN_ONION_LAYOUT;
     }
 
@@ -578,10 +581,11 @@ std::string getRandomString(const unsigned int &length) {
     for (unsigned int i = 0; i < length; i++) {
         unsigned int random_index = dist(engine); //get index between 0 and possible_characters.size()-1
 
-        if (i == 0 && '0' == possible_characters[random_index]) {
-        	continue;
+        while (i == 0 && '0' == possible_characters[random_index]) {
+        	random_index = dist(engine);
         }
         ret += possible_characters[random_index];
+
     }
 
     return ret;

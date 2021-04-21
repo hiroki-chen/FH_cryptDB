@@ -31,6 +31,8 @@
 
 #include "parser/rapidjson/document.h"
 #include "parser/rapidjson/filereadstream.h"
+#include "parser/rapidjson/filewritestream.h"
+#include "parser/rapidjson/writer.h"
 
 
 #include "field.h"
@@ -1554,25 +1556,58 @@ do_get_salt_count(const std::string &dir, const std::string &file_name,
 }
 
 struct DirectiveData {
+	std::string database_name;
     std::string table_name;
     std::string field_name;
     SECURITY_RATING sec_rating;
+    std::string param;
+    std::string dir;
+
+    bool isSetParam;
+    double val;
 
     DirectiveData(const std::string query)
     {
-        std::list<std::string> tokens = split(query, " ");
-        for (auto it : tokens) { std::cout << it << std::endl; }
-        assert(tokens.size() == 4);
+    	isSetParam = false;
+        std::list<std::string> tokens = split(query.substr(0, query.size() - 1), " ");
+
+        // DIRECTIVE
         tokens.pop_front();
 
-        table_name = tokens.front();
-        tokens.pop_front();
+        if (tokens.front() == "SETPARAM") {
+        	isSetParam = true;
+        	tokens.pop_front();
+        	database_name = tokens.front();
 
-        field_name = tokens.front();
-        tokens.pop_front();
+        	tokens.pop_front();
+        	table_name = tokens.front();
 
-        sec_rating = TypeText<SECURITY_RATING>::toType(tokens.front());
-        tokens.pop_front();
+        	tokens.pop_front();
+        	field_name = tokens.front();
+
+        	tokens.pop_front();
+        	param = tokens.front();
+        	tokens.pop_front();
+        	tokens.pop_front();
+        	val = stod(tokens.front());
+
+        	dir.append("CryptDB_DATA/");
+        	dir.append(database_name + "/");
+        	dir.append(table_name + "/");
+        	dir.append(field_name + ".json");
+        } else {
+        	tokens.pop_front();
+
+        	table_name = tokens.front();
+        	tokens.pop_front();
+
+        	field_name = tokens.front();
+        	tokens.pop_front();
+
+        	sec_rating = TypeText<SECURITY_RATING>::toType(tokens.front());
+        	tokens.pop_front();
+        }
+
     }
 };
 
@@ -1583,23 +1618,47 @@ struct DirectiveData {
 // > DIRECTIVE SELECT <table_name | field_name | rating>
 //               FROM cryptdb_metadata
 //              WHERE <table_name | field_name | rating> = [value]
+// OR
+// > DIRECTIVE SETPARAM <database_name> <table_name> <field_name> <ATTRIBUTE> = [value];
 RewriteOutput *
 Rewriter::handleDirective(Analysis &a, const ProxyState &ps,
                           const std::string &query)
 {
     DirectiveData data(query);
-    const FieldMeta &fm =
-        a.getFieldMeta(a.getDatabaseName(), data.table_name,
-                       data.field_name);
-    const SECURITY_RATING current_rating = fm.getSecurityRating();
-    if (current_rating < data.sec_rating) {
-        FAIL_TextMessageError("cryptdb does not support going to a more"
-                              " secure rating!");
-    } else if (current_rating == data.sec_rating) {
-        return new SimpleOutput(mysql_noop());
+
+    if (data.isSetParam) {
+    	std::cout << "set param!\n";
+    	FILE *file = fopen(data.dir.c_str(), "r");
+    	char buffer[65535];
+    	rapidjson::Document doc;
+    	rapidjson::FileReadStream frs(file, buffer, sizeof(buffer));
+
+    	// Parse the file into DOM.
+    	doc.ParseStream(frs);
+    	fclose(file);
+
+    	doc[data.param.c_str()] = data.val;
+    	file = fopen(data.dir.c_str(), "w");
+    	rapidjson::FileWriteStream fws(file, buffer, sizeof(buffer));
+    	rapidjson::Writer<rapidjson::FileWriteStream> writer(fws);
+    	doc.Accept(writer);
+    	fclose(file);
+
+    	return new SimpleOutput(mysql_noop());
     } else {
-        // Actually do things.
-        FAIL_TextMessageError("implement handleDirective!");
+        const FieldMeta &fm =
+            a.getFieldMeta(a.getDatabaseName(), data.table_name,
+                           data.field_name);
+        const SECURITY_RATING current_rating = fm.getSecurityRating();
+        if (current_rating < data.sec_rating) {
+            FAIL_TextMessageError("cryptdb does not support going to a more"
+                                  " secure rating!");
+        } else if (current_rating == data.sec_rating) {
+            return new SimpleOutput(mysql_noop());
+        } else {
+            // Actually do things.
+            FAIL_TextMessageError("implement handleDirective!");
+        }
     }
 }
 

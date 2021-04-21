@@ -44,7 +44,7 @@ public:
     Salt() {}
 
     Salt(const unsigned long &salt_length) :
-            salt_name(getRandomString(salt_length)), count(0) {}
+            salt_name(getRandomString(salt_length)), count(1) {}
 
     Salt(const unsigned long& _count, const std::string &_salt_name) :
     	salt_name(_salt_name), count(_count) {}

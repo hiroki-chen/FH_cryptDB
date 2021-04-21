@@ -1202,9 +1202,7 @@ Analysis::loadSaltsFromJsonDOM(const rapidjson::Document &doc, const std::string
 
 				for (auto it = salt_content.MemberBegin(); it != salt_content.MemberEnd(); it++) {
 					const unsigned int count = it->value.GetUint();
-					std::cout << count << std::endl;
 					const std::string salt_name = it->name.GetString();
-					std::cout << salt_name << std::endl;
 					salt_table[Interval(begin, end, db_name, table_name, field_name)]
 							   .push_back(std::unique_ptr<Salt>(new Salt(count, salt_name)));
 				}

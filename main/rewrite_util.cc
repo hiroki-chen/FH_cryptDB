@@ -295,11 +295,25 @@ getOriginalKeyName(Key *const key)
     return out_name;
 }
 
+/**
+ * Haobin Chen.
+ *
+ * When we have either deleted or updated several rows in the table, we must check if there are any rows
+ * containing salts; in other words, we have to update the salt table as well, to keep synchronized.
+ *
+ * If we let the salt table grow and never delete something from it, the table could grow at a relatively
+ * unimaginable speed, which is not so ideal for the implementation of CryptDB.
+ */
 bool
 updateSaltTable(const ResType &dbres, const ReturnMeta &rmeta)
 {
+	/**
+	 * TODO: Debug info, delete it after implementation.
+	 */
 	const unsigned int row_count = dbres.rows.size();
 	std::cout << "In delete / update: we have detected " << row_count << " rows to be deleted / updated." <<std::endl;
+
+
 	return true;
 }
 
@@ -851,7 +865,7 @@ resultEpilogue(const ProxyState &ps, const QueryRewrite &qr,
  */
 bool
 tossACoin(const double &p) {
-	std::bernoulli_distribution dist(1 - p);
+	std::bernoulli_distribution dist(p);
 	std::random_device rd;
 	std::mt19937 engine(rd());
 	return dist(engine);
@@ -882,12 +896,19 @@ getSalt(std::vector<double> &params, const Item &item,
 	std::vector<std::unique_ptr<Salt>> &salt_table =
 			a.salt_table[Interval(interval.first, interval.second, db_name, table_name, field_name)];
 
-	if (true == tossACoin(p) || salt_table.empty()) {
-		salt_table.push_back(std::unique_ptr<Salt>(new Salt(salt_length)));
+	const std::string salt = chooseSalt(salt_table, alpha, params[6], params[7], interval, a, doc);
+
+	if (true == tossACoin(p) || 0 == salt.compare("-1")) {
+		std::unique_ptr<Salt> item(new Salt(salt_length));
+
+		salt_table.push_back(std::move(std::unique_ptr<Salt>(new Salt(salt_length))));
 		doc["total_salt_used"]= ++params[6];
+
+		writeSaltTableToJsonDOM(doc, interval, salt_table);
+		return salt_table.back().get()->getSaltName();
 	}
 
-	return chooseSalt(salt_table, alpha, params[6], params[7], interval, a, doc);
+	return salt;
 }
 
 bool
@@ -936,32 +957,31 @@ chooseSalt(std::vector<std::unique_ptr<Salt>> &salts, const double &alpha,
 				const std::pair<unsigned int, unsigned int> &interval,
 				Analysis &a, rapidjson::Document &doc)
 {
-	unsigned int limit = salts.size() - 1;
-
-	std::random_device rd;
-	std::mt19937 engine(rd());
-	std::uniform_real_distribution<double> dist(-0.01, limit);
-
-	unsigned int salt_index = 0;
+	/**
+	 * If the salt table is empty, return -1 to notify the application to generate a new one.
+	 */
+	if (salts.empty()) {
+		return "-1";
+	}
+	std::random_shuffle(salts.begin(), salts.end());
 
 	/**
 	 * Choose a salt at random and meet some requirements.
 	 */
-	while (true) {
-	    salt_index = std::ceil(dist(engine));
-
-	    if ((double) (salts[salt_index].get()->getCount() * 1.0 / salts.size()) <=
+	for (unsigned int i = 0; i < salts.size(); i++) {
+	    if ((double) (salts[i].get()->getCount() * 1.0 / salts.size()) <=
 	        (double) (alpha * (ptext_size + 1) /*Because new item added*/ / total_salt_used)) {
-	        break;
+	    	salts[i].get()->incrementCount();
+
+	    	doc["ptext_size"] = doc["ptext_size"].GetUint() + 1;
+
+	    	writeSaltTableToJsonDOM(doc, interval, salts);
+
+	        return salts[i].get()->getSaltName();
 	    }
 	}
 
-	salts[salt_index].get()->incrementCount();
-
-	doc["ptext_size"] = doc["ptext_size"].GetUint() + 1;
-
-	writeSaltTableToJsonDOM(doc, interval, salts);
-	return salts[salt_index].get()->getSaltName();
+	return "-1"; // Not fount.
 }
 
 
