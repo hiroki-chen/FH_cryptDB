@@ -413,6 +413,7 @@ public:
     std::map<std::string, std::map<const std::string, const std::string>>
         table_aliases;
     std::map<const Item_field *, std::pair<Item_field *, OLK>> item_cache;
+    std::map<std::string, std::string> anon_to_plain;
 
     // information for decrypting results
     ReturnMeta rmeta;

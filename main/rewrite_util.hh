@@ -74,10 +74,15 @@ commit_transaction_lex(const std::string &dbname);
 
 std::vector<Create_field *>
 rewrite_create_field(const FieldMeta * const fm, Create_field * const f,
-                     const Analysis &a, bool needEnc);
+                     const Analysis &a, bool needEnc, std::vector<rapidjson::Document> &doc);
 
 std::vector<Key *>
 rewrite_key(const TableMeta &tm, Key * const key, const Analysis &a);
+
+rapidjson::Document
+buildEmptyJSONForNewFHField(const std::string &dbname,
+						        const std::string &table_name,
+								const std::string &field_name);
 
 std::string
 bool_to_string(bool b);
@@ -145,7 +150,7 @@ tossACoin(const double &p);
  * When rows are deleted or updated, we must do synchronization.
  */
 bool
-updateSaltTable(const ResType &dbres, const ReturnMeta &rmeta);
+updateSaltTable(const ResType &dbres, Analysis &a);
 
 bool
 issueSelectForDeleteOrUpdate(Analysis &a, const LEX *const lex, const ProxyState &ps);

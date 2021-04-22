@@ -8,6 +8,7 @@
 #include <parser/lex_util.hh>
 #include <parser/stringify.hh>
 #include <util/enum_text.hh>
+#include <main/CryptoHandlers.hh>
 
 #include "parser/rapidjson/document.h"
 #include "parser/rapidjson/filereadstream.h"
@@ -228,13 +229,13 @@ get_create_field(const Analysis &a, Create_field * const f,
 // as such is handled during INSERTion.
 std::vector<Create_field *>
 rewrite_create_field(const FieldMeta * const fm,
-                     Create_field * const f, const Analysis &a, bool needEnc)
+                     Create_field * const f, const Analysis &a, bool needEnc, std::vector<rapidjson::Document> &documents)
 {
     LOG(cdb_v) << "in rewrite create field for " << *f;
 
     assert(fm->children.size() > 0);
 
-
+    auto it = documents.begin();
     std::vector<Create_field *> output_cfields;
     if (!needEnc) {
     	output_cfields.push_back(f);
@@ -247,6 +248,28 @@ rewrite_create_field(const FieldMeta * const fm,
     	    for (auto oit : fm->orderedOnionMetas()) {
     	        OnionMeta * const om = oit.second;
     	        Create_field * const new_cf = get_create_field(a, f, *om);
+
+    	        // TODO (haobin chen): ADD ANON NAME TO MAP!!
+    	        // Get a document object and modify the "anon_field_name" attribute and rewrite it to the file.
+    	        // This is easy because we can get the path of the json file.
+
+    	        // Also, do not forget to store the key.
+    	        // if it is oFHDET column, get the enc_layer.
+    	        const auto &enc_layers = a.getEncLayers(*om);
+    	        for (auto &item: enc_layers) {
+    	        	std::cout << item.get()->name() << std::endl;
+
+    	        	// If the type is fh_det, then we store the key into the file.
+    	        	if (SECLEVEL::FHDET == item.get()->level()) {
+    	        		// And it works.
+    	        		std::cout << item.get()->getKeyForJSON() << std::endl;
+    	        		rapidjson::Value &key = (*it)["AES key"];
+    	        		const std::string rawkey = item.get()->getKeyForJSON();
+    	        		key.SetString(rawkey.c_str(), strlen(rawkey.c_str()), (*it).GetAllocator());
+
+    	        		// TODO: WRITE THE DOCUMENTS BACK ONTO THE DISK.
+    	        	}
+    	        }
 
     	        output_cfields.push_back(new_cf);
     	    }
@@ -305,14 +328,36 @@ getOriginalKeyName(Key *const key)
  * unimaginable speed, which is not so ideal for the implementation of CryptDB.
  */
 bool
-updateSaltTable(const ResType &dbres, const ReturnMeta &rmeta)
+updateSaltTable(const ResType &dbres, Analysis &a)
 {
 	/**
 	 * TODO: Debug info, delete it after implementation.
 	 */
 	const unsigned int row_count = dbres.rows.size();
 	std::cout << "In delete / update: we have detected " << row_count << " rows to be deleted / updated." <<std::endl;
+	const unsigned int col_count = dbres.names.size();
 
+	// Un-anonymize the columns.
+	for (unsigned int i = 0; i < dbres.names.size(); i++) {
+		// TODO: maybe we should maintain somehow a table in Analysis, to look up the plain field name for FH-columns?
+
+		/**
+		 * Step 1: Check the table if it is a fh-column by looking up the table stored in Analysis.
+		 * Step 2: get the length of the salt.
+		 * Step 3: Traverse rows that belong to it, and modify the corresponding salt table (by calculating the interval)
+		 */
+
+		auto iter = a.anon_to_plain.find(dbres.names[i]);
+		if (a.anon_to_plain.end() != iter) {
+			// We will insert the mapping from anon to plain of the fh-columns when creating the table; thus
+			// it is easy for us to get the plain table name.
+
+			// Also, the key is needed.
+
+			// TODO: UPDATE SALT TABLE.
+
+		}
+	}
 
 	return true;
 }
@@ -335,7 +380,7 @@ issueSelectForDeleteOrUpdate(Analysis &a, const LEX *const lex, const ProxyState
      */
     const ResType &res = dbres.get()->unpack();
 
-    return updateSaltTable(res, qr.get()->rmeta);
+    return updateSaltTable(res, a);
 }
 
 std::vector<Key *>
@@ -413,6 +458,53 @@ string_to_bool(const std::string &s)
     }
 }
 
+rapidjson::Document
+buildEmptyJSONForNewFHField(const std::string &dbname,
+						        const std::string &table_name,
+								const std::string &field_name)
+{
+	rapidjson::Document doc;
+	doc.SetObject();
+	auto allocator = doc.GetAllocator();
+	/**
+	 * Fill in the basic information.
+	 */
+	rapidjson::Value v;
+	v.SetString(dbname.c_str(), strlen(dbname.c_str()), allocator);
+	doc.AddMember("db_name", v, allocator);
+	v.SetString(table_name.c_str(), strlen(table_name.c_str()), allocator);
+	doc.AddMember("table_name", v, allocator);
+	v.SetString(field_name.c_str(), strlen(field_name.c_str()), allocator);
+	doc.AddMember("field_name", v, allocator);
+	v.SetString("");
+	doc.AddMember("anon_field_name", v, allocator);
+	v.SetString("");
+	doc.AddMember("AES key", v, allocator);
+
+	/**
+	 * Set params to be default values.
+	 */
+	v.SetDouble(1.0);
+	doc.AddMember("alpha", v, allocator);
+	v.SetUint(2);
+	doc.AddMember("interval_num", v, allocator);
+	v.SetDouble(0.05);
+	doc.AddMember("p", v, allocator);
+	v.SetUint(16);
+	doc.AddMember("salt_length", v, allocator);
+	v.SetArray();
+	v.PushBack(1, allocator).PushBack(1000, allocator);
+	doc.AddMember("range", v, allocator);
+	v.SetUint(0);
+	doc.AddMember("total_salt_used", v, allocator);
+	v.SetUint(0);
+	doc.AddMember("ptext_size", v, allocator);
+	v.SetArray();
+	//TODO: the salt array should be computed later... Or add by a function.
+
+	return doc;
+}
+
 List<Create_field>
 createAndRewriteField(Analysis &a, const ProxyState &ps,
                       Create_field * const cf,
@@ -423,7 +515,7 @@ createAndRewriteField(Analysis &a, const ProxyState &ps,
 	/*
 	 * judge first.
 	 */
-
+	std::vector<rapidjson::Document> documents;
     const std::string name = std::string(cf->field_name);
     auto buildFieldMeta =
         [] (const std::string name, Create_field * const cf,
@@ -440,12 +532,14 @@ createAndRewriteField(Analysis &a, const ProxyState &ps,
      * TODO: create a direcotry for json table first.
      */
     if (needFrequencySmoothing(name)) {
-    	std::string dir = "";
+    	std::string dir = "CryptDB_DATA/";
         dir.append(a.getDatabaseName() + '/');
-        dir.append(plain_table_name + '/');
-        dir.append(name);
+        dir.append(plain_table_name);
         std::string command = "mkdir -p " + dir;
         system(command.c_str());
+
+        // TODO: ADD AN EMPTY JSON
+        documents.push_back(buildEmptyJSONForNewFHField(a.getDatabaseName(), plain_table_name, name));
      }
 
 
@@ -456,7 +550,7 @@ createAndRewriteField(Analysis &a, const ProxyState &ps,
     // -----------------------------
     //         Rewrite FIELD       
     // -----------------------------
-    const auto new_fields = rewrite_create_field(fm.get(), cf, a, needEnc);
+    const auto new_fields = rewrite_create_field(fm.get(), cf, a, needEnc, documents); // Write document back.
     rewritten_cfield_list.concat(vectorToListWithTHD(new_fields));
 
     // -----------------------------

@@ -53,6 +53,7 @@ public:
     EncLayer() : LeafDBMeta() {}
     EncLayer(unsigned int id) : LeafDBMeta(id) {}
 
+    virtual std::string getKeyForJSON() const { return "-1";}
     std::string typeName() const {return type_name;}
     static std::string instanceTypeName() {return type_name;}
 

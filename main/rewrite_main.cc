@@ -1569,7 +1569,7 @@ struct DirectiveData {
     DirectiveData(const std::string query)
     {
     	isSetParam = false;
-        std::list<std::string> tokens = split(query.substr(0, query.size() - 1), " ");
+        std::list<std::string> tokens = split(query, " ");
 
         // DIRECTIVE
         tokens.pop_front();
@@ -1733,7 +1733,6 @@ Rewriter::decryptResults(const ResType &dbres, const ReturnMeta &rmeta)
 {
     const unsigned int rows = dbres.rows.size();
     LOG(cdb_v) << "rows in result " << rows << "\n";
-    std::cout << "rows in result " << rows << std::endl;
     const unsigned int cols = dbres.names.size();
 
     ResType res;

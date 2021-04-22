@@ -629,6 +629,8 @@ public:
                                   const std::string &anonname = "")
 	        const;
 
+	std::string getKeyForJSON() const {return rawkey;}
+
 	Item *encrypt(const Item &ptext, uint64_t IV) const;
 	Item *decrypt(Item *const, uint64_t salt_length) const;
 	Item *decryptUDF(Item * const col, Item * const ivcol = NULL)

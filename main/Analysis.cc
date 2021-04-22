@@ -1160,6 +1160,8 @@ Analysis::loadSaltsFromJsonDOM(const rapidjson::Document &doc, const std::string
 	const std::string table_name = doc["table_name"].GetString();
 	const std::string field_name = doc["field_name"].GetString();
 
+	anon_to_plain[doc["anon_field_name"].GetString()] = field_name;
+
 	const rapidjson::Value &interval_num = doc["interval_num"];
 
 	std::vector<double> params;
