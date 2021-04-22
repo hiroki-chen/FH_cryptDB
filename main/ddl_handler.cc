@@ -197,6 +197,11 @@ class DropTableHandler : public DDLHandler {
             a.deltas.push_back(std::unique_ptr<Delta>(
                             new DeleteDelta(tm,
                                             a.getDatabaseMeta(tbl->db))));
+            std::string dir = "CryptDB_DATA/";
+            dir.append(a.getDatabaseName() + "/");
+            dir.append((std::string)(table));
+
+            assert(dropJson(dir));
         }
     }
 };

@@ -229,7 +229,8 @@ get_create_field(const Analysis &a, Create_field * const f,
 // as such is handled during INSERTion.
 std::vector<Create_field *>
 rewrite_create_field(const FieldMeta * const fm,
-                     Create_field * const f, const Analysis &a, bool needEnc, std::vector<rapidjson::Document> &documents)
+                     Create_field * const f, const Analysis &a,
+					 bool needEnc, std::vector<rapidjson::Document> &documents)
 {
     LOG(cdb_v) << "in rewrite create field for " << *f;
 
@@ -260,16 +261,27 @@ rewrite_create_field(const FieldMeta * const fm,
     	        	std::cout << item.get()->name() << std::endl;
 
     	        	// If the type is fh_det, then we store the key into the file.
-    	        	if (SECLEVEL::FHDET == item.get()->level()) {
+    	        	if (SECLEVEL::FHDET == item.get()->level() && it != documents.end()) {
     	        		// And it works.
-    	        		std::cout << item.get()->getKeyForJSON() << std::endl;
-    	        		rapidjson::Value &key = (*it)["AES key"];
+    	        		// assert(it != documents.end()) <- If this happens, resolve discrepancy.
+    	        		rapidjson::Value &key = (*it)["AES_key"];
     	        		const std::string rawkey = item.get()->getKeyForJSON();
     	        		key.SetString(rawkey.c_str(), strlen(rawkey.c_str()), (*it).GetAllocator());
 
-    	        		// TODO: WRITE THE DOCUMENTS BACK ONTO THE DISK.
+    	        		rapidjson::Value &anon_field_name = (*it)["anon_field_name"];
+    	        		anon_field_name.SetString(new_cf->field_name, (*it).GetAllocator());
+
+    	        		// WRITE THE DOCUMENTS BACK ONTO THE DISK.
+    	        		std::string dir = "CryptDB_DATA/";
+    	        		dir.append((std::string)((*it)["db_name"].GetString()) + "/");
+    	        		dir.append((std::string)((*it)["table_name"].GetString()) + "/");
+    	        		dir.append((std::string)((*it)["field_name"].GetString()) + ".json");
+
+    	        		assert(writeDomToFile(*it, dir));
+    	        		it ++;
     	        	}
     	        }
+
 
     	        output_cfields.push_back(new_cf);
     	    }
@@ -296,6 +308,69 @@ rewrite_create_field(const FieldMeta * const fm,
     }
 
     return output_cfields;
+}
+
+/**
+ * Haobin Chen.
+ * This function is invoked either when a new document is created, i.e., a new field is created,
+ * or when a DIRECTIVE query is issued in order to change the parameters.
+ *
+ * Consider two scenarios:
+ * 		1. New field is created. We just create an empty object and add it to the salt array;
+ * 		2. Parameters of the old field is altered by DIRECTIVE SETPARAM query. We should merge the salt.
+ */
+bool
+getSaltContentForJSONDocument(rapidjson::Document &doc)
+{
+	rapidjson::Value &salts = doc["salts"];
+	auto allocator = doc.GetAllocator();
+
+	try {
+		if (!salts.IsArray()) {
+			throw std::runtime_error("INTERNAL JSON ERROR: SALTS MUST BE AN ARRAY.\n");
+		}
+
+		// Fetch the range.
+		const unsigned int begin = doc["range"].GetArray()[0].GetUint();
+		const unsigned int end = doc["range"].GetArray()[1].GetUint();
+		const unsigned int interval_num = doc["interval_num"].GetUint();
+
+		const unsigned int length = std::ceil((double)((end - begin + 1) * 1.0 / interval_num));
+
+		// Case 1: empty salt content. This means we've just created a new field.
+		// DO COMPUTATION!
+		if (0 == salts.Size()) {
+			for (unsigned int i = begin; i + length <= end + 1; i += length) {
+				rapidjson::Value salt_item(rapidjson::kObjectType); // But what does k mean.
+
+				rapidjson::Value salt_begin, salt_end;
+				salt_begin.SetUint(i);
+				salt_end.SetUint(i + length);
+
+				rapidjson::Value content(rapidjson::kArrayType);
+
+				salt_item.AddMember("begin", salt_begin, allocator);
+				salt_item.AddMember("end", salt_end, allocator);
+				salt_item.AddMember("content", content, allocator);
+
+				salts.PushBack(salt_item, allocator);
+			}
+
+		// Case 2: invoked by handleDirective that wants to modify the parameters.
+		// TODO: Merge the salts.
+		// Tricky because we may need to split the interval and allocate the salt to the divided intervals.
+		} else {
+
+		}
+	} catch (std::runtime_error re) {
+		std::cout << re.what();
+
+		return false;
+		// Just return false, and this will not not modify the json file.
+		// (Because we cannot write to a non-array type. :P)
+	}
+
+	return true;
 }
 
 std::vector<onion>
@@ -350,11 +425,26 @@ updateSaltTable(const ResType &dbres, Analysis &a)
 		auto iter = a.anon_to_plain.find(dbres.names[i]);
 		if (a.anon_to_plain.end() != iter) {
 			// We will insert the mapping from anon to plain of the fh-columns when creating the table; thus
-			// it is easy for us to get the plain table name.
+			// it is easy for us to get the plain table name which is definitely with prefix "fh_".
 
-			// Also, the key is needed.
+			// Get the AES key from JSON document.
+			rapidjson::Document doc;
+			char readBuffer[65535];
+			std::string dir = "CryptDB_DATA/";
+			dir.append(a.getDatabaseName() + "/");
+			dir.append(a.table_name_last_used + "/");
+			dir.append(iter->second + ".json");
+
+			FILE *file = fopen(dir.c_str(), "r");
+
+			rapidjson::FileReadStream frs(file, readBuffer, sizeof(readBuffer));
+			doc.ParseStream(frs);
+			const AES_KEY *const dec_key = get_AES_dec_key((std::string)(doc["AES_key"].GetString()));
 
 			// TODO: UPDATE SALT TABLE.
+			/**
+			 * Traverse the corresponding rows.
+			 */
 
 		}
 	}
@@ -458,6 +548,17 @@ string_to_bool(const std::string &s)
     }
 }
 
+bool
+dropJson(const std::string &path)
+{
+	std::string command = "rm -rf ";
+	command.append(path);
+
+	system(command.c_str());
+
+	return true;
+}
+
 rapidjson::Document
 buildEmptyJSONForNewFHField(const std::string &dbname,
 						        const std::string &table_name,
@@ -479,7 +580,7 @@ buildEmptyJSONForNewFHField(const std::string &dbname,
 	v.SetString("");
 	doc.AddMember("anon_field_name", v, allocator);
 	v.SetString("");
-	doc.AddMember("AES key", v, allocator);
+	doc.AddMember("AES_key", v, allocator);
 
 	/**
 	 * Set params to be default values.
@@ -490,7 +591,7 @@ buildEmptyJSONForNewFHField(const std::string &dbname,
 	doc.AddMember("interval_num", v, allocator);
 	v.SetDouble(0.05);
 	doc.AddMember("p", v, allocator);
-	v.SetUint(16);
+	v.SetUint(extractSaltLengthFromField(field_name));
 	doc.AddMember("salt_length", v, allocator);
 	v.SetArray();
 	v.PushBack(1, allocator).PushBack(1000, allocator);
@@ -500,7 +601,10 @@ buildEmptyJSONForNewFHField(const std::string &dbname,
 	v.SetUint(0);
 	doc.AddMember("ptext_size", v, allocator);
 	v.SetArray();
-	//TODO: the salt array should be computed later... Or add by a function.
+	doc.AddMember("salts", v, allocator);
+	//The salt array should be computed later... Add a function to implement this.
+
+	assert(getSaltContentForJSONDocument(doc));
 
 	return doc;
 }

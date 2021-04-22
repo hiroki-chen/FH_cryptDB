@@ -1,1 +1,1 @@
-{"db_name":"xinan","table_name":"ttt","field_name":"fh_id_16","alpha":0.8,"interval_num":3,"p":0.7,"salt_length":16,"range":[2,200],"total_salt_used":0,"ptext_size":0,"salts":[{"begin":68,"end":134,"content":[]},{"begin":2,"end":68,"content":[]}]}
+{"db_name":"xinan","table_name":"ttt","field_name":"fh_id_16","anon_field_name":"VBOMUZQITLoFHDET","AES_key":"\u0014¬>Ñ2#\u0019\u0018’GRƒ:0Zõ","alpha":1.0,"interval_num":2,"p":0.05,"salt_length":16,"range":[1,1000],"total_salt_used":0,"ptext_size":0,"salts":[{"begin":1,"end":501,"content":[]},{"begin":501,"end":1001,"content":[]}]}

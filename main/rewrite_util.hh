@@ -79,6 +79,12 @@ rewrite_create_field(const FieldMeta * const fm, Create_field * const f,
 std::vector<Key *>
 rewrite_key(const TableMeta &tm, Key * const key, const Analysis &a);
 
+bool
+getSaltContentForJSONDocument(rapidjson::Document &doc);
+
+bool
+dropJson(const std::string &path);
+
 rapidjson::Document
 buildEmptyJSONForNewFHField(const std::string &dbname,
 						        const std::string &table_name,
