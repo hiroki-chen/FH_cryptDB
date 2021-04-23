@@ -186,6 +186,22 @@ DBResult::~DBResult()
     mysql_free_result(n);
 }
 
+static Item *
+getItem(char *const content, enum_field_types type, uint len)
+{
+    if (content == NULL) {
+        return new Item_null();
+    }
+    const std::string content_str = std::string(content, len);
+    if (IsMySQLTypeNumeric(type)) {
+        const ulonglong val = valFromStr(content_str);
+        return new Item_int(val);
+    } else {
+        return new Item_string(make_thd_string(content_str), len,
+                               &my_charset_bin);
+    }
+}
+
 // > returns the data in the last server response
 // > TODO: to optimize return pointer to avoid overcopying large
 //   result sets?
@@ -205,7 +221,7 @@ DBResult::unpack()
         return ResType();
     }
 
-//    const int cols = mysql_num_fields(n);
+    const int cols = mysql_num_fields(n);
 
     ResType res;
 
@@ -224,14 +240,14 @@ DBResult::unpack()
         if (!row) {
             break;
         }
-//        unsigned long *const lengths = mysql_fetch_lengths(n);
+        unsigned long *const lengths = mysql_fetch_lengths(n);
 
         std::vector<std::shared_ptr<Item> > resrow;
 
-//        for (int j = 0; j < cols; j++) {
-//            Item *const item = getItem(row[j], res.types[j], lengths[j]);
-//            resrow.push_back(std::shared_ptr<Item>(item));
-//        }
+        for (int j = 0; j < cols; j++) {
+            Item *const item = getItem(row[j], res.types[j], lengths[j]);
+            resrow.push_back(std::shared_ptr<Item>(item));
+        }
 
         res.rows.push_back(resrow);
     }

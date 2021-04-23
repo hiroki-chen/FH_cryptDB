@@ -405,12 +405,12 @@ getOriginalKeyName(Key *const key)
 bool
 updateSaltTable(const ResType &dbres, Analysis &a)
 {
+	//printRes(dbres);
 	/**
 	 * TODO: Debug info, delete it after implementation.
 	 */
 	const unsigned int row_count = dbres.rows.size();
 	std::cout << "In delete / update: we have detected " << row_count << " rows to be deleted / updated." <<std::endl;
-	const unsigned int col_count = dbres.names.size();
 
 	// Un-anonymize the columns.
 	for (unsigned int i = 0; i < dbres.names.size(); i++) {
@@ -445,7 +445,10 @@ updateSaltTable(const ResType &dbres, Analysis &a)
 			/**
 			 * Traverse the corresponding rows.
 			 */
-
+			for (unsigned int r = 0; r < dbres.rows.size(); r++) {
+				// TODO: extract salt from the encrypted value and then update salt table.
+				std::cout << *(dbres.rows[r][i].get()) << std::endl;
+			}
 		}
 	}
 
@@ -1079,6 +1082,7 @@ getSalt(std::vector<double> &params, const Item &item,
 		const std::string &field_name,
 		Analysis &a, rapidjson::Document &doc)
 {
+	doc["ptext_size"] = doc["ptext_size"].GetUint() + 1;
 	const double val = RiboldMYSQL::val_real(item);
 
 	// Fetch parameters from params.
@@ -1106,6 +1110,7 @@ getSalt(std::vector<double> &params, const Item &item,
 		return salt_table.back().get()->getSaltName();
 	}
 
+	writeSaltTableToJsonDOM(doc, interval, salt_table);
 	return salt;
 }
 
@@ -1170,8 +1175,6 @@ chooseSalt(std::vector<std::unique_ptr<Salt>> &salts, const double &alpha,
 	    if ((double) (salts[i].get()->getCount() * 1.0 / salts.size()) <=
 	        (double) (alpha * (ptext_size + 1) /*Because new item added*/ / total_salt_used)) {
 	    	salts[i].get()->incrementCount();
-
-	    	doc["ptext_size"] = doc["ptext_size"].GetUint() + 1;
 
 	    	writeSaltTableToJsonDOM(doc, interval, salts);
 
