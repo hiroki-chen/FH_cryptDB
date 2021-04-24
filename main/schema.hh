@@ -53,6 +53,8 @@ public:
 
     bool incrementCount() {return (count++);}
 
+    bool decrementCount() {return (--count);}
+
     std::string getSaltName() const {return salt_name;}
 
 private:

@@ -119,7 +119,7 @@ getSalt(const Item &item, const double &alpha,
 		 const std::pair<unsigned int, unsigned int> &range,
 		 Analysis &a);
 
-std::string
+int
 chooseSalt(std::vector<std::unique_ptr<Salt>> &salts, const double &alpha,
                 const unsigned int &total_salt_used,
                 const unsigned int &ptext_size,

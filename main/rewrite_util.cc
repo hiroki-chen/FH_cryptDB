@@ -439,16 +439,44 @@ updateSaltTable(const ResType &dbres, Analysis &a)
 
 			rapidjson::FileReadStream frs(file, readBuffer, sizeof(readBuffer));
 			doc.ParseStream(frs);
-			const AES_KEY *const dec_key = get_AES_dec_key((std::string)(doc["AES_key"].GetString()));
+			const AES_KEY *const deckey = get_AES_dec_key((std::string)(doc["AES_key"].GetString()));
+
+			const unsigned int salt_length = doc["salt_length"].GetUint();
 
 			// TODO: UPDATE SALT TABLE.
 			/**
 			 * Traverse the corresponding rows.
 			 */
 			for (unsigned int r = 0; r < dbres.rows.size(); r++) {
+				doc["ptext_size"] = doc["ptext_size"].GetUint() - 1;
 				// TODO: extract salt from the encrypted value and then update salt table.
-				std::cout << *(dbres.rows[r][i].get()) << std::endl;
+				const std::string dec = decrypt_AES_CMC(ItemToString(*(dbres.rows[r][i].get())), deckey, true);
+
+				const unsigned int val = stoull(dec.substr(0, dec.size() - salt_length));
+				const std::string salt_str = dec.substr(dec.size() - salt_length);
+				//std::cout << salt_str << std::endl;
+				const std::pair<unsigned int, unsigned int> interval =
+						getIntervalForItem(doc["interval_num"].GetUint(),
+										   std::make_pair(doc["range"][0].GetUint(), doc["range"][1].GetUint()),
+										   val);
+
+				std::vector<std::unique_ptr<Salt>> &salt_table =
+									a.salt_table[Interval(interval.first, interval.second,
+												 	 	  a.getDatabaseName(), a.table_name_last_used, iter->second)];
+				auto lambda = [&](const std::unique_ptr<Salt>& item) {
+					return item.get()->getSaltName() == salt_str;
+				};
+
+				const auto &salt_item = std::find_if(salt_table.begin(), salt_table.end(), lambda);
+
+				if (salt_table.end() != salt_item && false == (*salt_item).get()->decrementCount()) {
+					salt_table.erase(salt_item);
+					doc["total_salt_used"] = doc["total_salt_used"].GetDouble() - 1;
+				}
+				writeSaltTableToJsonDOM(doc, interval, salt_table);
 			}
+
+			writeDomToFile(doc, dir);
 		}
 	}
 
@@ -1098,9 +1126,9 @@ getSalt(std::vector<double> &params, const Item &item,
 	std::vector<std::unique_ptr<Salt>> &salt_table =
 			a.salt_table[Interval(interval.first, interval.second, db_name, table_name, field_name)];
 
-	const std::string salt = chooseSalt(salt_table, alpha, params[6], params[7], interval, a, doc);
+	const int salt = chooseSalt(salt_table, alpha, params[6], params[7], interval, a, doc);
 
-	if (true == tossACoin(p) || 0 == salt.compare("-1")) {
+	if (true == tossACoin(p) || -1 == salt) {
 		std::unique_ptr<Salt> item(new Salt(salt_length));
 
 		salt_table.push_back(std::move(std::unique_ptr<Salt>(new Salt(salt_length))));
@@ -1110,8 +1138,9 @@ getSalt(std::vector<double> &params, const Item &item,
 		return salt_table.back().get()->getSaltName();
 	}
 
+	salt_table[salt].get()->incrementCount();
 	writeSaltTableToJsonDOM(doc, interval, salt_table);
-	return salt;
+	return salt_table[salt].get()->getSaltName();
 }
 
 bool
@@ -1153,7 +1182,7 @@ writeSaltTableToJsonDOM(rapidjson::Document &doc,
 /**
  * TODO: ADD INTERVAL
  */
-std::string
+int
 chooseSalt(std::vector<std::unique_ptr<Salt>> &salts, const double &alpha,
                 const unsigned int &total_salt_used,
                 const unsigned int &ptext_size,
@@ -1164,7 +1193,7 @@ chooseSalt(std::vector<std::unique_ptr<Salt>> &salts, const double &alpha,
 	 * If the salt table is empty, return -1 to notify the application to generate a new one.
 	 */
 	if (salts.empty()) {
-		return "-1";
+		return -1;
 	}
 	std::random_shuffle(salts.begin(), salts.end());
 
@@ -1174,15 +1203,11 @@ chooseSalt(std::vector<std::unique_ptr<Salt>> &salts, const double &alpha,
 	for (unsigned int i = 0; i < salts.size(); i++) {
 	    if ((double) (salts[i].get()->getCount() * 1.0 / salts.size()) <=
 	        (double) (alpha * (ptext_size + 1) /*Because new item added*/ / total_salt_used)) {
-	    	salts[i].get()->incrementCount();
-
-	    	writeSaltTableToJsonDOM(doc, interval, salts);
-
-	        return salts[i].get()->getSaltName();
+	        return i;
 	    }
 	}
 
-	return "-1"; // Not fount.
+	return -1; // Not fount.
 }
 
 
