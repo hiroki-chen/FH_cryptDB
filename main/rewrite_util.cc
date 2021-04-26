@@ -403,7 +403,7 @@ getOriginalKeyName(Key *const key)
  * unimaginable speed, which is not so ideal for the implementation of CryptDB.
  */
 bool
-updateSaltTable(const ResType &dbres, Analysis &a)
+updateSaltTable(const ResType &dbres, Analysis &a, bool update)
 {
 	//printRes(dbres);
 	/**
@@ -443,12 +443,16 @@ updateSaltTable(const ResType &dbres, Analysis &a)
 
 			const unsigned int salt_length = doc["salt_length"].GetUint();
 
+			std::vector<double> &params =
+										a.variables[VariableLocator(a.getDatabaseName(), a.table_name_last_used, iter->second)];
+
 			// TODO: UPDATE SALT TABLE.
 			/**
 			 * Traverse the corresponding rows.
 			 */
 			for (unsigned int r = 0; r < dbres.rows.size(); r++) {
 				doc["ptext_size"] = doc["ptext_size"].GetUint() - 1;
+				params[7] = doc["ptext_size"].GetUint();
 				// TODO: extract salt from the encrypted value and then update salt table.
 				const std::string dec = decrypt_AES_CMC(ItemToString(*(dbres.rows[r][i].get())), deckey, true);
 
@@ -472,21 +476,60 @@ updateSaltTable(const ResType &dbres, Analysis &a)
 				if (salt_table.end() != salt_item && false == (*salt_item).get()->decrementCount()) {
 					salt_table.erase(salt_item);
 					doc["total_salt_used"] = doc["total_salt_used"].GetDouble() - 1;
+					params[6] = doc["total_salt_used"].GetDouble();
 				}
-				writeSaltTableToJsonDOM(doc, interval, salt_table);
-			}
 
-			writeDomToFile(doc, dir);
+				/**
+				 * Check if the SQL query is UPDATE type.
+				 */
+
+				/*if (update) {
+					auto findValueItem = [&](const std::pair<Item_field *const, Item *const> &item) {
+						return 0 == iter->second.compare((item.first)->field_name);
+					};
+
+					auto field_value_pair =
+							std::find_if(a.field_value_pairs.begin(), a.field_value_pairs.end(), findValueItem);
+
+					if (a.field_value_pairs.end() != field_value_pair) {
+						getSalt(params, *(field_value_pair->second), a.getDatabaseName(), a.table_name_last_used, iter->second, a, doc);
+						}
+					}
+				}*/
+				writeSaltTableToJsonDOM(doc, interval, salt_table);
+				writeDomToFile(doc, dir);
+			}
 		}
 	}
 
 	return true;
 }
 
-bool
-issueSelectForDeleteOrUpdate(Analysis &a, const LEX *const lex, const ProxyState &ps)
+bool loadAllSalsFromFile(const std::string &db_name, const TABLE_LIST *const table_list, Analysis &a)
 {
-    std::string select_clause = generateEquivalentSelectStatement(lex);
+	std::string path = "CryptDB_DATA/";
+	path.append(db_name + "/");
+	path.append(table_list->table_name); // We do not consider alias.
+
+	std::vector<std::string> jsons = getFiles(path);
+
+	for (auto item : jsons) {
+		std::string dir = path + "/";
+		dir.append(item);
+		std::cout << dir << std::endl;
+	    rapidjson::Document doc;
+	    getDocumentFromFileAndLoadSalt(dir, a, doc);
+	}
+
+	return true;
+}
+
+bool
+issueSelectForDeleteOrUpdate(Analysis &a, const LEX *const lex, const ProxyState &ps, bool update)
+{
+    std::string select_clause =
+    		update ? generateEquivalentSelectStatementForUpdate(lex) : generateEquivalentSelectStatementForDelete(lex);
+
     DMLOutput *output = new DMLOutput(a.select_plain_for_update_or_delete, select_clause);
     std::unique_ptr<QueryRewrite> qr = std::unique_ptr<QueryRewrite>(new QueryRewrite(true, a.rmeta, output));
     std::unique_ptr<DBResult> dbres;
@@ -501,7 +544,7 @@ issueSelectForDeleteOrUpdate(Analysis &a, const LEX *const lex, const ProxyState
      */
     const ResType &res = dbres.get()->unpack();
 
-    return updateSaltTable(res, a);
+    return updateSaltTable(res, a, update);
 }
 
 std::vector<Key *>
@@ -916,6 +959,35 @@ needFrequencySmoothing(const std::string &field_name)
 	return 0 == field_name.substr(0, 3).compare(FH_IDENTIFIER);
 }
 
+std::vector<std::string>
+getFiles(const std::string &path)
+{
+	DIR *dir = opendir(path.c_str());
+	std::vector<std::string> ans;
+
+	struct dirent *entry = readdir(dir);
+
+	while (entry != NULL) {
+	    if (entry->d_type != DT_DIR) {
+	    	const std::string name = entry->d_name;
+
+	    	/**
+	    	 * We only need to load frequency smoothing columns and not temporary file!
+	    	 */
+	    	if (needFrequencySmoothing(name) && '~' != name.back()) {
+	    		ans.push_back((std::string)(entry->d_name));
+	    	}
+
+	    }
+
+	    entry = readdir(dir);
+	}
+
+	closedir(dir);
+
+	return ans;
+}
+
 bool
 needEncryption(const std::string &field_name)
 {
@@ -1110,6 +1182,7 @@ getSalt(std::vector<double> &params, const Item &item,
 		const std::string &field_name,
 		Analysis &a, rapidjson::Document &doc)
 {
+	std::cout << "ptext size: " << doc["ptext_size"].GetUint() << std::endl;
 	doc["ptext_size"] = doc["ptext_size"].GetUint() + 1;
 	const double val = RiboldMYSQL::val_real(item);
 
@@ -1132,6 +1205,7 @@ getSalt(std::vector<double> &params, const Item &item,
 		std::unique_ptr<Salt> item(new Salt(salt_length));
 
 		salt_table.push_back(std::move(std::unique_ptr<Salt>(new Salt(salt_length))));
+		std::cout << "salt_table: " << salt_table.size() << std::endl;
 		doc["total_salt_used"]= ++params[6];
 
 		writeSaltTableToJsonDOM(doc, interval, salt_table);

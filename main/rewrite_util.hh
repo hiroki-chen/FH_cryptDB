@@ -8,6 +8,7 @@
 
 #include <sql_list.h>
 #include <sql_table.h>
+#include <dirent.h>
 
 const std::string BOLD_BEGIN = "\033[1m";
 const std::string RED_BEGIN = "\033[1;31m";
@@ -126,6 +127,12 @@ chooseSalt(std::vector<std::unique_ptr<Salt>> &salts, const double &alpha,
 				const std::pair<unsigned int, unsigned int> &interval,
 				Analysis &a, rapidjson::Document &doc);
 
+std::vector<std::string>
+getFiles(const std::string &dir);
+
+bool
+loadAllSalsFromFile(const std::string &db_name, const TABLE_LIST *const table_list, Analysis &a);
+
 bool
 writeSaltTableToJsonDOM(rapidjson::Document &doc,
 						const std::pair<unsigned int, unsigned int> &interval,
@@ -156,10 +163,10 @@ tossACoin(const double &p);
  * When rows are deleted or updated, we must do synchronization.
  */
 bool
-updateSaltTable(const ResType &dbres, Analysis &a);
+updateSaltTable(const ResType &dbres, Analysis &a, bool update = false);
 
 bool
-issueSelectForDeleteOrUpdate(Analysis &a, const LEX *const lex, const ProxyState &ps);
+issueSelectForDeleteOrUpdate(Analysis &a, const LEX *const lex, const ProxyState &ps, bool update = false);
 
 Item *
 encrypt_item_layers(const Item &i, onion o, const OnionMeta &om,

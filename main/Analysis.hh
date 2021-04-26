@@ -382,7 +382,7 @@ class Analysis {
 
 public:
     Analysis(const std::string &default_db, const SchemaInfo &schema)
-        : pos(0), special_update(false), db_name(default_db),
+        : pos(0), update(false), special_update(false), db_name(default_db),
           schema(schema)  {}
 
     unsigned int pos; // > a counter indicating how many projection
@@ -399,8 +399,12 @@ public:
     // Avoid memory leakage...
     std::map<Interval, std::vector<std::unique_ptr<Salt>>, cmp> salt_table;
 
-    // Each field should has its alpha 0, interval_num 1, and p 2, salt_length 3, begin 4, end 5, total 6.
+    // Each field should has its alpha 0, interval_num 1, and p 2, salt_length 3, begin 4, end 5, total 6, ps 7.
     std::map<VariableLocator, std::vector<double>, VLCmp> variables;
+
+    std::vector<std::pair<Item_field *, Item *>> field_value_pairs;
+
+    bool update;
 
     /**
      * Once the item is encrypted fully, we should reset the count_table.
@@ -425,6 +429,8 @@ public:
                   const std::string &table);
 
     unsigned int loadSaltsFromJsonDOM(const rapidjson::Document &doc, const std::string &value);
+
+
 
     OnionMeta &getOnionMeta(const std::string &db,
                             const std::string &table,

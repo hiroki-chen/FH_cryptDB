@@ -1384,6 +1384,14 @@ do_transform_where(const LEX &lex, Analysis &a) {
 		set_where(&(new_lex->select_lex), typical_do_transform_where(*new_lex->select_lex.where, a));
 		return new_lex;
 	} else {
+		if (SQLCOM_DELETE == lex.sql_command || SQLCOM_UPDATE == lex.sql_command) {
+			/**
+			 * TODO: call a.loadAllSalts().
+			 */
+
+			loadAllSalsFromFile(a.getDatabaseName(), lex.query_tables, a);
+			a.table_name_last_used = lex.query_tables->table_name;
+		}
 		return new_lex;
 	}
 }

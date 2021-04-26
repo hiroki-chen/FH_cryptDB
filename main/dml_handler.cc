@@ -6,9 +6,7 @@
 #include <parser/lex_util.hh>
 
 extern CItemTypesDir itemTypes;
-
-
-std::string generateEquivalentSelectStatement(const LEX *const lex)
+std::string generateEquivalentSelectStatementForDelete(const LEX *const lex)
 {
 	LEX *const new_lex = copyWithTHD(lex);
 
@@ -18,8 +16,29 @@ std::string generateEquivalentSelectStatement(const LEX *const lex)
 	std::string delete_clause = o.str();
 	std::cout << delete_clause << std::endl;
 	auto pos = (delete_clause.find("FROM") == std::string::npos) ?
-			delete_clause.find("from") : delete_clause.find("FROM");
+				delete_clause.find("from") : delete_clause.find("FROM");
 	select_clause.append(delete_clause.substr(pos));
+
+	return select_clause;
+}
+
+std::string generateEquivalentSelectStatementForUpdate(const LEX *const lex)
+{
+	std::string select_clause = "SELECT * FROM ";
+
+	select_clause.append(lex->query_tables->db);
+	select_clause.append(".");
+
+	RiboldMYSQL::constList_iterator<TABLE_LIST> join_it(lex->select_lex.top_join_list);
+	const TABLE_LIST *const t = join_it++;
+
+	assert(t);
+	select_clause.append(t->table_name);
+	select_clause.append(" WHERE 1 OR ");
+
+	std::ostringstream o;
+	o << lex->select_lex.where;
+	select_clause.append(o.str());
 
 	return select_clause;
 }
@@ -278,20 +297,31 @@ class UpdateHandler : public DMLHandler {
         auto fd_it = List_iterator<Item>(lex->select_lex.item_list);
         auto val_it = List_iterator<Item>(lex->value_list);
         List<Item> res_fields, res_values;
+
+        assert(issueSelectForDeleteOrUpdate(a, new_lex, ps, true));
+
+        /**
+         * TODO: issue a SELECT CLAUSE to the server at first.
+         */
         a.special_update =
             false == rewrite_field_value_pairs(fd_it, val_it, a, 
                                                &res_fields, &res_values);
         new_lex->select_lex.item_list = res_fields;
         new_lex->value_list = res_values;
+
         return new_lex;
     }
 };
-
+/**
+ * FIXME: need to load every salt into salt_table for queries like:
+ * 		DELETE FROM <TABLE_NAME> (WHERE TRUE);
+ * otherwise we cannot delete the deleted elements' coresponding salts.
+ */
 class DeleteHandler : public DMLHandler {
     virtual void gather(Analysis &a, LEX *const lex, const ProxyState &ps)
         const
     {
-    	a.select_plain_for_update_or_delete = generateEquivalentSelectStatement(lex);
+    	//a.select_plain_for_update_or_delete = generateEquivalentSelectStatement(lex);
         process_select_lex(lex->select_lex, a);
     }
 
@@ -433,6 +463,11 @@ gatherAndAddAnalysisRewritePlanForFieldValuePair(const Item_field &field,
                                                  const Item &val,
                                                  Analysis &a)
 {
+	/**
+	 * Add to the pairs for further analysis. (especially needed to update salt table.)
+	 */
+	auto pair = std::make_pair(copyWithTHD(&field), copyWithTHD(&val));
+	a.field_value_pairs.push_back(std::move(pair));
 	a.rewritePlans[&val] = std::unique_ptr<RewritePlan>(gather(val, a));
     a.rewritePlans[&field] =
         std::unique_ptr<RewritePlan>(gather(field, a));
@@ -656,6 +691,7 @@ process_table_aliases(const List<TABLE_LIST> &tll, Analysis &a)
     RiboldMYSQL::constList_iterator<TABLE_LIST> join_it(tll);
     for (;;) {
         const TABLE_LIST *const t = join_it++;
+
         if (!t)
             break;
 
@@ -762,6 +798,9 @@ doPairRewrite(FieldMeta &fm, const EncSet &es,
               List<Item> *const res_fields, List<Item> *const res_values,
               Analysis &a)
 {
+	/**
+	 * We could modify here.
+	 */
     const std::unique_ptr<RewritePlan> &field_rp =
         constGetAssert(a.rewritePlans,
                        &static_cast<const Item &>(field_item));
@@ -776,27 +815,22 @@ doPairRewrite(FieldMeta &fm, const EncSet &es,
             itemTypes.do_rewrite(field_item, olk, *field_rp, a);
         res_fields->push_back(re_field);
 
-        std::string identifier = fm.fname.substr(0, 5);
-        const std::string nenc = "nenc_";
-        if (identifier.compare(nenc) == 0) {
-        	Item* const re_value= const_cast<Item*>(&value_item);
+        if (!needFrequencySmoothing(fm.fname) && !needEncryption(fm.fname)) {
+        	Item *const re_value = copyWithTHD(&value_item);
         	res_values->push_back(re_value);
         } else {
-        	Item *const re_value =
-        	            itemTypes.do_rewrite(value_item, olk, *value_rp, a);
-
-        	        // 对update中的更新数据进行编码
-        	        std::cout << "re_value->str_value: " << re_value->str_value << std::endl;
-        			int item_type = re_value->type();
-        	    	if(item_type == 3){
-        	    		char* decode = re_value->EncodeVarbinary();
-        	    		std::cout << "re_value->str_value decode: " <<  decode << std::endl; // 对VARBINARY编码
-        	    		std::cout << "re_value->str_value decode size: " << strlen(decode) << std::endl; // 对VARBINARY编码
-        	    	}
-        			std::cout << "re_value->str_value encode: " << re_value->str_value << std::endl;
-        			std::cout << "re_value->str_value encode size: " << re_value->str_value.length() << std::endl;
-
-        	        res_values->push_back(re_value);
+        	/**
+        	 * TODO: Implement UPDATE for freqeuncy smoothing columns.
+        	 *
+        	 * Let update be true to denote that the encrypt_item function should be an "insert" type.
+        	 */
+        	if (needFrequencySmoothing(fm.fname)) {
+            	a.update = true;
+            	Item *const re_value =
+            	            itemTypes.do_rewrite(value_item, olk, *value_rp, a);
+            	res_values->push_back(re_value);
+            	a.update = false;
+        	}
         }
     }
 }

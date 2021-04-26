@@ -20,6 +20,8 @@
 #include <util/cryptdb_log.hh>
 #include <util/enum_text.hh>
 #include <parser/lex_util.hh>
+#include "parser/rapidjson/filereadstream.h"
+#include "parser/rapidjson/filewritestream.h"
 
 // class/object names we don't care to know the name of
 #define ANON                ANON_NAME(__anon_id_const)
@@ -40,57 +42,103 @@ encrypt_item(const Item &i, const OLK &olk, Analysis &a)
 
     salt_type IV = 0;
 
+    /**
+     * This can be invoked by UPDATE handler.
+     */
+
     if (needFrequencySmoothing(field_name)) {
-    	std::vector<double> params = a.variables[VariableLocator(db_name, table_name, field_name)];
-    	/**
-    	 * If there is no parameter vector, or the size is not 6, for this item, then something must have gone wrong.
-    	 */
-    	assert(8 == params.size());
+    	if (!a.update) {
+        	std::vector<double> params = a.variables[VariableLocator(db_name, table_name, field_name)];
+        	/**
+        	 * If there is no parameter vector, or the size is not 6, for this item, then something must have gone wrong.
+        	 */
+        	assert(8 == params.size());
 
-    	unsigned int interval_num = params[1];
-    	unsigned int left = params[4];
-    	unsigned int right = params[5];
-    	double val;
+        	unsigned int interval_num = params[1];
+        	unsigned int left = params[4];
+        	unsigned int right = params[5];
+        	double val;
 
-    	if (Item::Type::INT_ITEM == i.type()) { // Test.
-    		val = RiboldMYSQL::val_uint(i);
+        	if (Item::Type::INT_ITEM == i.type()) { // Test.
+        		val = RiboldMYSQL::val_uint(i);
+        	}
+
+        	MyItem sd = MyItem(db_name, table_name, field_name, RiboldMYSQL::val_real(i));
+        	std::cout << "sd: " << sd.getValue();
+        	unsigned int pos = a.count_table[sd]++;
+
+        	std::pair<unsigned int, unsigned int> itv =
+        			getIntervalForItem(interval_num, std::make_pair(left, right), val);
+
+        	std::vector<std::unique_ptr<Salt>>& salt_table =
+        			a.salt_table[Interval(itv.first, itv.second, db_name, table_name, field_name)];
+
+        	// TODO: reset count.
+        	if (pos + 1 == salt_table.size()) {
+        		a.count_table[MyItem(db_name, table_name, field_name, RiboldMYSQL::val_real(i))] = 0;
+        	}
+
+        	assert(pos < salt_table.size());\
+
+            // HACK + BROKEN.
+            if (!fm && oPLAIN == olk.o) {
+                return RiboldMYSQL::clone_item(i);
+            }
+
+        	salt_type IV = 0;
+
+
+            assert(fm);
+
+            const onion o = olk.o;
+            LOG(cdb_v) << fm->fname << " " << fm->children.size();
+
+            //const auto it = a.salts.find(fm);
+
+            OnionMeta * const om = fm->getOnionMeta(o);
+            Item * const ret_i = encrypt_item_layers(i, o, *om, a, IV);
+
+            return ret_i;
+    	} else {
+    		std::string dir = "CryptDB_DATA/";
+    		dir.append(db_name + '/');
+    		dir.append(table_name + "/");
+    		dir.append(field_name + ".json");
+
+    		rapidjson::Document doc;
+
+    		FILE *in_file = fopen(dir.c_str(), "r");
+    		char read_buffer[65536];
+    		rapidjson::FileReadStream frs(in_file, read_buffer, sizeof(read_buffer));
+
+    		// Parse the file into DOM.
+    		doc.ParseStream(frs);
+
+    		std::vector<double> &params = a.variables[VariableLocator(db_name, table_name, field_name)];
+
+    		salt_type IV = 0;
+    		if (SECLEVEL::FHDET == olk.l) {
+    			IV = stoull(getSalt(params, i, db_name, table_name, field_name, a, doc));
+    		}
+
+    		// TODO: write the document back!
+    		// encrypt_item_all_onions(i, fm, IV, a, l);
+    		assert(writeDomToFile(doc, dir));
+
+    		if (!fm && oPLAIN == olk.o) {
+    			return RiboldMYSQL::clone_item(i);
+    		}
+    		assert(fm);
+
+    		const onion o = olk.o;
+            //const auto it = a.salts.find(fm);
+
+            OnionMeta * const om = fm->getOnionMeta(o);
+            Item * const ret_i = encrypt_item_layers(i, o, *om, a, IV);
+
+            return ret_i;
     	}
-
-    	MyItem sd = MyItem(db_name, table_name, field_name, RiboldMYSQL::val_real(i));
-    	std::cout << "sd: " << sd.getValue();
-    	unsigned int pos = a.count_table[sd]++;
-
-    	std::pair<unsigned int, unsigned int> itv =
-    			getIntervalForItem(interval_num, std::make_pair(left, right), val);
-
-    	std::vector<std::unique_ptr<Salt>>& salt_table =
-    			a.salt_table[Interval(itv.first, itv.second, db_name, table_name, field_name)];
-
-    	// TODO: reset count.
-    	if (pos + 1 == salt_table.size()) {
-    		a.count_table[MyItem(db_name, table_name, field_name, RiboldMYSQL::val_real(i))] = 0;
-    	}
-
-    	assert(pos < salt_table.size());
-    	IV = stoull(salt_table[pos].get()->getSaltName());
-    	std::cout << "IV: " << IV << std::endl;
     }
-
-    // HACK + BROKEN.
-    if (!fm && oPLAIN == olk.o) {
-        return RiboldMYSQL::clone_item(i);
-    }
-    assert(fm);
-
-    const onion o = olk.o;
-    LOG(cdb_v) << fm->fname << " " << fm->children.size();
-
-    const auto it = a.salts.find(fm);
-
-    OnionMeta * const om = fm->getOnionMeta(o);
-    Item * const ret_i = encrypt_item_layers(i, o, *om, a, IV);
-
-    return ret_i;
 }
 
 static class ANON : public CItemSubtypeIT<Item_string,
