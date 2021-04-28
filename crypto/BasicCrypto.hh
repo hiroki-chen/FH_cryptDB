@@ -16,8 +16,12 @@
 #include <openssl/evp.h>
 #include <openssl/rsa.h>
 #include <crypto/prng.hh>
+#include <crypto/sm4.hh>
 
 #include <util/onions.hh>
+
+unsigned char*
+string_to_uc(const std::string &s);
 
 std::string getLayerKey(const AES_KEY * const mKey,
                         std::string uniqueFieldName, SECLEVEL l);
@@ -65,6 +69,17 @@ encrypt_AES_CMC(const std::string &ptext, const AES_KEY * enckey, bool dopad = t
 
 std::string
 decrypt_AES_CMC(const std::string &ctext, const AES_KEY * deckey, bool dopad = true);
+
+/**
+ * SM4 encryption / decryption interface.
+ * We only support EBC mode :P
+ */
+
+std::string
+encrypt_SM4_EBC(const std::string &ptext, const std::string &raw_key);
+
+std::string
+decrypt_SM4_EBC(const std::string &ctext, const std::string &raw_key);
 
 
 //**** Public Key Cryptosystem (PKCS) *****//

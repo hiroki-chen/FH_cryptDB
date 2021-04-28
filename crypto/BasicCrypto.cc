@@ -5,6 +5,7 @@
  */
 
 #include <climits>
+#include <string>
 
 #include <crypto/BasicCrypto.hh>
 #include <util/ctr.hh>
@@ -14,6 +15,18 @@
 
 using namespace std;
 
+unsigned char*
+string_to_uc(const std::string &s)
+{
+	unsigned char *ret = new unsigned char[s.size()];
+	memset(ret, (uint8_t)0, sizeof(unsigned char) * s.size());
+
+	for (unsigned int i = 0; i < s.size(); i++) {
+		ret[i] = (uint8_t)s[i];
+	}
+
+	return ret;
+}
 
 bool
 rounded_len(unsigned long len, uint block_size, bool dopad,
@@ -320,6 +333,33 @@ decrypt_AES_CMC(const string &ctext, const AES_KEY * deckey, bool dopad)
     return decrypt_AES_CBC(reversed, deckey, "0", dopad);
 }
 
+//*************** SM4 Cryptosystem
+//**********************************************/
+std::string
+encrypt_SM4_EBC(const std::string &ptext, const std::string &raw_key)
+{
+	sm4_context ctx;
+	auto ptext_buf = pad(vector<unsigned char>(ptext.begin(), ptext.end()), 32);
+	std::vector<unsigned char> ctext_buf(ptext_buf.size());
+	std::cout << raw_key << std::endl;
+	sm4_setkey_enc(&ctx, (unsigned char*)raw_key.c_str());
+	sm4_crypt_ecb(&ctx, 1, ptext_buf.size(), &ptext_buf[0], &ctext_buf[0]);
+	return string((char *) &ctext_buf[0], ctext_buf.size());
+}
+
+std::string
+decrypt_SM4_EBC(const std::string &ctext, const std::string &raw_key)
+{
+	sm4_context ctx;
+	std::vector<unsigned char> ptext_buf(ctext.size());
+	//memset(ptext, (uint8_t)'0', sizeof(unsigned char) * ctext.size());
+
+	sm4_setkey_dec(&ctx, (unsigned char*)raw_key.c_str());
+	//std::cout << raw_key << std::endl;
+	sm4_crypt_ecb(&ctx, 0, ctext.size(), (unsigned char *) ctext.data(), &ptext_buf[0]);
+	auto res = unpad(ptext_buf);
+	return string((char *)&res[0], res.size());
+}
 
 //**************** Public Key Cryptosystem (PKCS)
 // ****************************************/

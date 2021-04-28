@@ -1,7 +1,7 @@
 OBJDIRS     += crypto
 CRYPTOSRC   := BasicCrypto.cc paillier.cc urandom.cc arc4.cc hgd.cc pbkdf2.cc \
 	       ecjoin.cc ECJoin.cc search.cc skip32.cc ffx.cc online_ope.cc mont.cc \
-	       prng.cc ope.cc SWPSearch.cc
+	       prng.cc ope.cc SWPSearch.cc sm4.cc
 CRYPTOOBJ   := $(patsubst %.cc,$(OBJDIR)/crypto/%.o,$(CRYPTOSRC))
 
 all:	$(OBJDIR)/libedbcrypto.a $(OBJDIR)/libedbcrypto.so
