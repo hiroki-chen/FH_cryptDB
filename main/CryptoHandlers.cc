@@ -1013,7 +1013,9 @@ FH_DET_int::encrypt(const Item &ptext, uint64_t IV) const {
 
     std::string str_val = std::to_string(p);
     str_val.append(std::to_string(IV));
-    const std::string c = encrypt_AES_CMC(str_val, enckey, true);
+    std::cout << "plain: " << str_val << std::endl;
+    //const std::string c = encrypt_SM4_EBC(str_val, rawkey);
+    const std::string c = encrypt_SM4_EBC(str_val, rawkey);
     std::cout << "ciphertext: " << c << std::endl;
 
     return new (current_thd->mem_root) Item_string(make_thd_string(c),
@@ -1025,11 +1027,11 @@ Item*
 FH_DET_int::decrypt(Item *const ctext, uint64_t salt_length) const {
 	// TODO: simply strip off the salts from the tail.
 	const std::string enc = ItemToString(*ctext);
-	std::string dec = decrypt_AES_CMC(enc, deckey, true);
+	//std::string dec = decrypt_SM4_EBC(enc, rawkey);
+	std::string dec = decrypt_SM4_EBC(enc, rawkey);
 
 	assert(dec.size() >= salt_length);
 	dec = dec.substr(0, dec.size() - salt_length);
-	std::cout << dec << std::endl;
 
 	return new (current_thd->mem_root) Item_string(make_thd_string(dec),
 	                                                   dec.length(),

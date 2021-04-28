@@ -48,23 +48,23 @@ encrypt_item(const Item &i, const OLK &olk, Analysis &a)
 
     if (needFrequencySmoothing(field_name)) {
     	if (!a.update) {
-        	std::vector<double> params = a.variables[VariableLocator(db_name, table_name, field_name)];
-        	/**
-        	 * If there is no parameter vector, or the size is not 6, for this item, then something must have gone wrong.
-        	 */
-        	assert(8 == params.size());
+    		std::vector<double> params = a.variables[VariableLocator(db_name, table_name, field_name)];
+    		    	/**
+    		    	 * If there is no parameter vector, or the size is not 6, for this item, then something must have gone wrong.
+    		    	 */
+    		assert(8 == params.size());
 
-        	unsigned int interval_num = params[1];
-        	unsigned int left = params[4];
-        	unsigned int right = params[5];
-        	double val;
+    		unsigned int interval_num = params[1];
+    		unsigned int left = params[4];
+    		unsigned int right = params[5];
+    		double val;
 
-        	if (Item::Type::INT_ITEM == i.type()) { // Test.
-        		val = RiboldMYSQL::val_uint(i);
-        	}
+    		if (Item::Type::INT_ITEM == i.type()) { // Test.
+    		    val = RiboldMYSQL::val_uint(i);
+    		}
 
         	MyItem sd = MyItem(db_name, table_name, field_name, RiboldMYSQL::val_real(i));
-        	std::cout << "sd: " << sd.getValue();
+        	std::cout << "sd: " << sd.getValue() << std::endl;
         	unsigned int pos = a.count_table[sd]++;
 
         	std::pair<unsigned int, unsigned int> itv =
@@ -72,31 +72,19 @@ encrypt_item(const Item &i, const OLK &olk, Analysis &a)
 
         	std::vector<std::unique_ptr<Salt>>& salt_table =
         			a.salt_table[Interval(itv.first, itv.second, db_name, table_name, field_name)];
-
+        	std::cout << "size: " << salt_table.size() << std::endl;
         	// TODO: reset count.
         	if (pos + 1 == salt_table.size()) {
         		a.count_table[MyItem(db_name, table_name, field_name, RiboldMYSQL::val_real(i))] = 0;
         	}
 
-        	assert(pos < salt_table.size());\
+        	assert(pos < salt_table.size());
 
-            // HACK + BROKEN.
-            if (!fm && oPLAIN == olk.o) {
-                return RiboldMYSQL::clone_item(i);
-            }
+        	IV = stoull(salt_table[pos].get()->getSaltName());
+        	std::cout << "IV: " << IV << std::endl;
 
-        	salt_type IV = 0;
-
-
-            assert(fm);
-
-            const onion o = olk.o;
-            LOG(cdb_v) << fm->fname << " " << fm->children.size();
-
-            //const auto it = a.salts.find(fm);
-
-            OnionMeta * const om = fm->getOnionMeta(o);
-            Item * const ret_i = encrypt_item_layers(i, o, *om, a, IV);
+            OnionMeta * const om = fm->getOnionMeta(olk.o);
+            Item * const ret_i = encrypt_item_layers(i, olk.o, *om, a, IV);
 
             return ret_i;
     	} else {

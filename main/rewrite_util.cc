@@ -439,7 +439,8 @@ updateSaltTable(const ResType &dbres, Analysis &a, bool update)
 
 			rapidjson::FileReadStream frs(file, readBuffer, sizeof(readBuffer));
 			doc.ParseStream(frs);
-			const AES_KEY *const deckey = get_AES_dec_key((std::string)(doc["AES_key"].GetString()));
+			//const AES_KEY *const deckey = get_AES_dec_key((std::string)(doc["AES_key"].GetString()));
+			const std::string rawkey = (std::string)(doc["AES_key"].GetString());
 
 			const unsigned int salt_length = doc["salt_length"].GetUint();
 
@@ -454,7 +455,7 @@ updateSaltTable(const ResType &dbres, Analysis &a, bool update)
 				doc["ptext_size"] = doc["ptext_size"].GetUint() - 1;
 				params[7] = doc["ptext_size"].GetUint();
 				// TODO: extract salt from the encrypted value and then update salt table.
-				const std::string dec = decrypt_AES_CMC(ItemToString(*(dbres.rows[r][i].get())), deckey, true);
+				const std::string dec = decrypt_SM4_EBC(ItemToString(*(dbres.rows[r][i].get())), rawkey);
 
 				const unsigned int val = stoull(dec.substr(0, dec.size() - salt_length));
 				const std::string salt_str = dec.substr(dec.size() - salt_length);
