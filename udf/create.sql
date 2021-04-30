@@ -78,3 +78,5 @@ CREATE FUNCTION cryptdb_func_add_set RETURNS STRING SONAME 'edb.so';
 CREATE AGGREGATE FUNCTION cryptdb_agg RETURNS STRING SONAME 'edb.so';
 CREATE FUNCTION cryptdb_searchSWP RETURNS INTEGER SONAME 'edb.so';
 CREATE FUNCTION cryptdb_version RETURNS STRING SONAME 'edb.so';
+
+-- TODO: CREATE FUNCTION specified in edb.so
