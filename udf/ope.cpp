@@ -1,6 +1,6 @@
 #include "Node.h"
-#include <mysql.h>
-#include <string.h>
+#include "mysql.h" // Specify include path when compiling. I.e. g++ -c -o -I /usr/include/mysql. Ensure that you have installed MySQL.
+#include <string>
 
 std::map<string, double> update;
 Node *root = nullptr;
@@ -34,7 +34,6 @@ getba(UDF_ARGS *const args, int i, double &len)
     return args->args[i];
 }
 
-
 /*插入*/
 double FHInsert(UDF_INIT *initid, UDF_ARGS *args, char *is_null, char *error)
 {
@@ -61,8 +60,6 @@ my_bool FHInsert_init(UDF_INIT *initid, UDF_ARGS *args, char *message)
     return 0;
 }
 
-
-
 /*搜索*/
 double
 FHSearch(UDF_INIT *const initid, UDF_ARGS *const args,
@@ -86,9 +83,6 @@ FHSearch_init(UDF_INIT *const initid, UDF_ARGS *const args,
     return 0;
 }
 
-
-
-
 double FHUpdate(UDF_INIT *initid, UDF_ARGS *args, char *is_null, char *error)
 {
     double keyLen;
@@ -103,8 +97,6 @@ my_bool FHUpdate_init(UDF_INIT *initid, UDF_ARGS *args, char *message)
     return 0;
 }
 
-
-
 double FHStart(UDF_INIT *initid, UDF_ARGS *args, char *is_null, char *error)
 {
     return lower_bound();
@@ -115,12 +107,8 @@ my_bool FHStart_init(UDF_INIT *initid, UDF_ARGS *args, char *message)
     return 0;
 }
 
-
-
-
 double FHEnd(UDF_INIT *initid, UDF_ARGS *args, char *is_null, char *error)
 {
-    
     return upper_bound();
 }
 

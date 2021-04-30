@@ -79,4 +79,21 @@ CREATE AGGREGATE FUNCTION cryptdb_agg RETURNS STRING SONAME 'edb.so';
 CREATE FUNCTION cryptdb_searchSWP RETURNS INTEGER SONAME 'edb.so';
 CREATE FUNCTION cryptdb_version RETURNS STRING SONAME 'edb.so';
 
+CREATE FUNCTION FHSearch RETURNS REAL SONAME 'ope.so';
+CREATE FUNCTION FHUpdate RETURNS REAL SONAME 'ope.so';
+CREATE FUNCTION FHInsert RETURNS REAL SONAME 'ope.so';
+CREATE FUNCTION FHStart RETURNS REAL SONAME 'ope.so';
+CREATE FUNCTION FHEnd RETURNS REAL SONAME 'ope.so';
+
+-- ! Create a procedure that supports the insert of frequency-hiding order-preserving encryption scheme.
+delimiter //
+CREATE PROCEDURE PRO_INSERT (IN pos int, IN ct varchar(128), IN table_name varchar(128)) BEGIN
+  DECLARE cd INT DEFAULT 0;
+  SET cd = FHInsert(pos, ct); -- Be aware of the function name.
+  INSERT INTO table_name VALUES (ct, cd);
+  IF cd < 1 THEN 
+    UPDATE table_name SET encoding = FHUpdate(ciphertext) WHERE encoding > FHStart() AND encoding <= FHEnd();
+  END
+delimiter ;
+
 -- TODO: CREATE FUNCTION specified in edb.so

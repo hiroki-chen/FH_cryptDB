@@ -2,17 +2,21 @@
 #include <array>
 #include <math.h>
 #include <assert.h>
+#include <string>
 #include <vector>
-#include <map> 
+#include <utility>
+#include <map>
 using namespace std;
 /*initalize all*/
 
-class Node {
+class Node
+{
 public:
 	int type;
 	int parent_index;
-	Node* parent = NULL;
-	virtual void rebalance() {};
+	Node *parent;
+	Node() : parent(nullptr) {}
+	virtual void rebalance(){};
 	virtual double insert(int pos, string cipher) { return 0; };
 	virtual double search(int pos) { return 0; };
 };
@@ -23,53 +27,55 @@ extern double start_update;
 extern double end_update;
 extern std::map<string, double> update;
 
-
-class InternalNode : public Node {
+class InternalNode : public Node
+{
 public:
 	/*internal node*/
 	std::vector<int> child_num; //子节点共有的加密值个数
-	std::vector<Node*> child; //子节点
+	std::vector<Node *> child;	//子节点
 	InternalNode();
 	void insert_node(int index, Node *new_node);
-	void rebalance() override;
-	double insert(int pos, string cipher) override;
-	double search(int pos) override;
+	void rebalance();
+	double insert(int pos, string cipher);
+	double search(int pos);
 };
 
-class LeafNode : public Node {
+class LeafNode : public Node
+{
 	/*leaf node*/
 public:
-	std::vector<std::string> cipher;//密文
-	std::vector<double> encoding;//密文
-	LeafNode* left_bro = NULL;
-	LeafNode* right_bro = NULL;
-	double lower = -1;
-	double upper = -1;
+	std::vector<std::string> cipher; //密文
+	std::vector<double> encoding;	 //密文
+	LeafNode *left_bro;
+	LeafNode *right_bro;
+	double lower;
+	double upper;
 
 	LeafNode();
 	double Encode(int pos);
-	void rebalance()override;
-	double insert(int pos, string cipher) override;
-	double search(int pos) override;
+	void rebalance();
+	double insert(int pos, string cipher);
+	double search(int pos);
 };
 
-
-
-InternalNode::InternalNode() {
+InternalNode::InternalNode()
+{
 	this->type = 2;
 	this->parent_index = -1;
 	this->parent = NULL;
 }
 
-
-void InternalNode::insert_node(int index, Node *new_node) {
+void InternalNode::insert_node(int index, Node *new_node)
+{
 
 	this->child.insert(this->child.begin() + index, new_node);
-	if (new_node->type == 1) {
+	if (new_node->type == 1)
+	{
 		this->child_num.insert(this->child_num.begin() + index, ((LeafNode *)new_node)->cipher.size());
 		((LeafNode *)new_node)->parent = this;
 	}
-	else {
+	else
+	{
 		int res = 0;
 		for (size_t i = 0; i < ((InternalNode *)new_node)->child_num.size(); i++)
 		{
@@ -78,11 +84,13 @@ void InternalNode::insert_node(int index, Node *new_node) {
 		this->child_num.insert(this->child_num.begin() + index, res);
 		((InternalNode *)new_node)->parent = this;
 	}
-	
-	for (int i = 0; i < this->child.size(); i++) {
+
+	for (int i = 0; i < this->child.size(); i++)
+	{
 		this->child.at(i)->parent_index = i;
-		if (this->child.at(i)->type == 1) {
-			LeafNode *tmp = (LeafNode*)this->child.at(i);
+		if (this->child.at(i)->type == 1)
+		{
+			LeafNode *tmp = (LeafNode *)this->child.at(i);
 			this->child_num.at(i) = tmp->cipher.size();
 		}
 	}
@@ -91,97 +99,112 @@ void InternalNode::insert_node(int index, Node *new_node) {
 		this->child.at(i)->parent_index = i;
 	}
 	*/
-	
-	if (this->child.size() >= M) {
+
+	if (this->child.size() >= M)
+	{
 		this->rebalance();
 	}
 }
 
-
-void InternalNode::rebalance() {
-	InternalNode* new_node = new InternalNode();
-	int middle = floor(this->child.size()*0.5);
-	while (middle > 0) {
-		new_node->child.insert(new_node->child.begin(), this->child.at(this->child.size()-1));
-		new_node->child_num.insert(new_node->child_num.begin(), this->child_num.at(this->child_num.size()-1));
+void InternalNode::rebalance()
+{
+	InternalNode *new_node = new InternalNode();
+	int middle = floor(this->child.size() * 0.5);
+	while (middle > 0)
+	{
+		new_node->child.insert(new_node->child.begin(), this->child.at(this->child.size() - 1));
+		new_node->child_num.insert(new_node->child_num.begin(), this->child_num.at(this->child_num.size() - 1));
 		this->child.pop_back();
 		this->child_num.pop_back();
 		middle--;
 	}
-	for (int i = 0; i < new_node->child.size(); i++) {
+	for (int i = 0; i < new_node->child.size(); i++)
+	{
 		new_node->child.at(i)->parent_index = i;
 		new_node->child.at(i)->parent = new_node;
 	}
-	if (!this->parent) {
+	if (!this->parent)
+	{
 		InternalNode *new_root = new InternalNode();
 		new_root->insert_node(0, this);
 		new_root->insert_node(1, new_node);
 		root = new_root;
-	} else {
+	}
+	else
+	{
 		int res = 0;
-		for (size_t i = 0; i < this->child_num.size(); i++) {
+		for (size_t i = 0; i < this->child_num.size(); i++)
+		{
 			res += this->child_num.at(i);
 		}
-		((InternalNode*)this->parent)->child_num.at(this->parent_index) = res;
-		((InternalNode*)this->parent)->insert_node(this->parent_index + 1, new_node);
-		
+		((InternalNode *)this->parent)->child_num.at(this->parent_index) = res;
+		((InternalNode *)this->parent)->insert_node(this->parent_index + 1, new_node);
 	}
-
 }
 
-double InternalNode::insert(int pos, string cipher) {
-	
-	for (int  i = 0; i < this->child.size(); i++) {
-		if (pos > this->child_num.at(i)) {
+double InternalNode::insert(int pos, string cipher)
+{
+
+	for (int i = 0; i < this->child.size(); i++)
+	{
+		if (pos > this->child_num.at(i))
+		{
 			pos = pos - this->child_num.at(i);
 		}
-		else {
+		else
+		{
 			this->child_num.at(i)++;
 			return this->child.at(i)->insert(pos, cipher);
 		}
 	}
 	return this->child.back()->insert(pos, cipher);
-	
 }
 
-double InternalNode::search(int pos) {
+double InternalNode::search(int pos)
+{
 	int i = 0;
-	for (; i < this->child.size(); i++) {
-		if (pos > this->child_num.at(i)) {
+	for (; i < this->child.size(); i++)
+	{
+		if (pos > this->child_num.at(i))
+		{
 			pos = pos - this->child_num.at(i);
 		}
-		else {
+		else
+		{
 			break;
 		}
 	}
 	return this->child.at(i)->search(pos);
 }
 
-
-
-LeafNode::LeafNode() {
+LeafNode::LeafNode() : left_bro(nullptr), right_bro(nullptr), lower(-1), upper(-1)
+{
 	this->type = 1;
 	this->parent_index = -1;
 	this->parent = NULL;
-
 }
 
-void Recode(vector<LeafNode*> node_list) {
+void Recode(vector<LeafNode *> node_list)
+{
 	double left_bound = node_list.at(0)->lower;
 	double right_bound = node_list.back()->upper;
 	int total_cipher_num = 0;
-	
-	for (size_t i = 0; i < node_list.size(); i++) {
+
+	for (size_t i = 0; i < node_list.size(); i++)
+	{
 		total_cipher_num += node_list.at(i)->cipher.size();
 	}
-	if ((right_bound - left_bound) > total_cipher_num) {
+	if ((right_bound - left_bound) > total_cipher_num)
+	{
 		start_update = left_bound;
 		end_update = right_bound;
-		double frag = floor((right_bound - left_bound)*1.0 / total_cipher_num);
+		double frag = floor((right_bound - left_bound) * 1.0 / total_cipher_num);
 		double cd = left_bound;
-		for (size_t i = 0; i < node_list.size(); i++) {
+		for (size_t i = 0; i < node_list.size(); i++)
+		{
 			node_list.at(i)->lower = cd;
-			for (int j = 0; j < node_list.at(i)->encoding.size(); j++) {
+			for (int j = 0; j < node_list.at(i)->encoding.size(); j++)
+			{
 				cd = cd + frag;
 				node_list.at(i)->encoding.at(j) = cd;
 				update.insert(std::pair<string, double>(node_list.at(i)->cipher.at(j), cd));
@@ -189,115 +212,131 @@ void Recode(vector<LeafNode*> node_list) {
 			node_list.at(i)->upper = cd;
 		}
 		node_list.back()->upper = right_bound;
-		
 	}
-	else {
-		if (node_list.at(0)->left_bro) {
+	else
+	{
+		if (node_list.at(0)->left_bro)
+		{
 			node_list.insert(node_list.begin(), node_list.at(0)->left_bro);
 		}
-		if (node_list.back()->right_bro) {
+		if (node_list.back()->right_bro)
+		{
 			node_list.push_back(node_list.back()->right_bro);
 		}
-		else {
+		else
+		{
 			node_list.back()->upper *= 2;
 		}
 		Recode(node_list);
 	}
-
 }
 
-double LeafNode::Encode(int pos) {
+double LeafNode::Encode(int pos)
+{
 	double left = this->lower;
 	double right = this->upper;
-	if (pos > 1) {
+	if (pos > 1)
+	{
 		left = this->encoding.at(pos - 1);
 	}
-	if (pos < this->encoding.size() - 1) {
+	if (pos < this->encoding.size() - 1)
+	{
 		right = this->encoding.at(pos + 1);
 	}
-	if ((right - left) <= 1) {
-		std::vector<LeafNode*> node_list;
+	if ((right - left) <= 1)
+	{
+		std::vector<LeafNode *> node_list;
 		node_list.push_back(this);
 		Recode(node_list);
 		return -1;
 	}
-	else {
-		this->encoding.at(pos) = floor((left + right)*0.5);
+	else
+	{
+		this->encoding.at(pos) = floor((left + right) * 0.5);
 		return this->encoding.at(pos);
 	}
 }
 
-void LeafNode::rebalance() {
-	LeafNode* new_node = new LeafNode();
-	int middle = floor(this->cipher.size()*0.5);
-	while (middle > 0) {
+void LeafNode::rebalance()
+{
+	LeafNode *new_node = new LeafNode();
+	int middle = floor(this->cipher.size() * 0.5);
+	while (middle > 0)
+	{
 		new_node->cipher.insert(new_node->cipher.begin(), this->cipher.at(this->cipher.size() - 1));
 		new_node->encoding.insert(new_node->encoding.begin(), this->encoding.at(this->encoding.size() - 1));
 		this->encoding.pop_back();
 		this->cipher.pop_back();
 		middle--;
 	}
-	new_node->lower = floor((this->encoding.back() + new_node->encoding.at(0))*0.5);
+	new_node->lower = floor((this->encoding.back() + new_node->encoding.at(0)) * 0.5);
 	new_node->upper = this->upper;
-	this->upper = floor((this->encoding.back() + new_node->encoding.at(0))*0.5);
-	if (this->right_bro) {
+	this->upper = floor((this->encoding.back() + new_node->encoding.at(0)) * 0.5);
+	if (this->right_bro)
+	{
 		this->right_bro->left_bro = new_node;
 	}
 	new_node->right_bro = this->right_bro;
 	this->right_bro = new_node;
 	new_node->left_bro = this;
-	if (!this->parent) {
+	if (!this->parent)
+	{
 		InternalNode *new_root = new InternalNode();
 		new_root->insert_node(0, this);
 		new_root->insert_node(1, new_node);
 		root = new_root;
 	}
-	else {
-		((InternalNode*)this->parent)->child_num.at(this->parent_index) = this->cipher.size();
-		if (this->cipher.size() >= M) {
+	else
+	{
+		((InternalNode *)this->parent)->child_num.at(this->parent_index) = this->cipher.size();
+		if (this->cipher.size() >= M)
+		{
 			printf("error\n");
 		}
-		((InternalNode*)this->parent)->insert_node(this->parent_index + 1, new_node);
+		((InternalNode *)this->parent)->insert_node(this->parent_index + 1, new_node);
 	}
-
 }
 
-double LeafNode::insert(int pos, string cipher) {
+double LeafNode::insert(int pos, string cipher)
+{
 	this->cipher.insert(this->cipher.begin() + pos, cipher);
 	this->encoding.insert(this->encoding.begin() + pos, 0);
 	double cd = this->Encode(pos);
-	if (this->cipher.size() >= M) {
+	if (this->cipher.size() >= M)
+	{
 		this->rebalance();
 	}
 	return cd;
-
 }
 
-double LeafNode::search(int pos) {
+double LeafNode::search(int pos)
+{
 	return this->encoding.at(pos);
 }
 
-
-
-void root_initial() {
+void root_initial()
+{
 	root = new LeafNode();
-	((LeafNode*)root)->lower = 0;
-	((LeafNode*)root)->upper = pow(2, 64);
+	((LeafNode *)root)->lower = 0;
+	((LeafNode *)root)->upper = pow(2, 64);
 	update.clear();
 };
 
-double upper_bound() {
+double upper_bound()
+{
 	return end_update;
 }
 
-double lower_bound() {
+double lower_bound()
+{
 	return start_update;
 }
 
-double get_update(string cipher) {
-	if (update.count(cipher) > 0) {
+double get_update(string cipher)
+{
+	if (update.count(cipher) > 0)
+	{
 		return update[cipher];
 	}
 	return -1;
 }
-
