@@ -6,25 +6,26 @@ std::map<string, double> update;
 Node *root = nullptr;
 double start_update = -1;
 double end_update = -1;
-extern "C" {
+extern "C"
+{
     //typedef double longlong;
     //插入
-    my_bool FHInsert_init(UDF_INIT* initid, UDF_ARGS* args, char* message);
-    double FHInsert(UDF_INIT *initid, UDF_ARGS *args,char *is_null, char *error);
+    my_bool FHInsert_init(UDF_INIT *initid, UDF_ARGS *args, char *message);
+    double FHInsert(UDF_INIT *initid, UDF_ARGS *args, char *is_null, char *error);
     //搜索
-    my_bool FHSearch_init(UDF_INIT *const initid, UDF_ARGS *const args,char *const message);
+    my_bool FHSearch_init(UDF_INIT *const initid, UDF_ARGS *const args, char *const message);
     double FHSearch(UDF_INIT *const initid, UDF_ARGS *const args,
-                         char *const result, unsigned long *const length,
-                         char *const is_null, char *const error);
-    
+                    char *const result, unsigned long *const length,
+                    char *const is_null, char *const error);
+
     //更新
-    my_bool FHUpdate_init(UDF_INIT* initid, UDF_ARGS* args, char* message);
-    double FHUpdate(UDF_INIT *initid, UDF_ARGS *args,char *is_null, char *error);
+    my_bool FHUpdate_init(UDF_INIT *initid, UDF_ARGS *args, char *message);
+    double FHUpdate(UDF_INIT *initid, UDF_ARGS *args, char *is_null, char *error);
     //更新范围
-    my_bool FHStart_init(UDF_INIT* initid, UDF_ARGS* args, char* message);
-    double FHStart(UDF_INIT *initid, UDF_ARGS *args,char *is_null, char *error);
-    my_bool FHEnd_init(UDF_INIT* initid, UDF_ARGS* args, char* message);
-    double FHEnd(UDF_INIT *initid, UDF_ARGS *args,char *is_null, char *error);
+    my_bool FHStart_init(UDF_INIT *initid, UDF_ARGS *args, char *message);
+    double FHStart(UDF_INIT *initid, UDF_ARGS *args, char *is_null, char *error);
+    my_bool FHEnd_init(UDF_INIT *initid, UDF_ARGS *args, char *message);
+    double FHEnd(UDF_INIT *initid, UDF_ARGS *args, char *is_null, char *error);
 }
 
 static char *
@@ -37,7 +38,7 @@ getba(UDF_ARGS *const args, int i, double &len)
 /*插入*/
 double FHInsert(UDF_INIT *initid, UDF_ARGS *args, char *is_null, char *error)
 {
-    int pos=*(int*)(args->args[0]);
+    int pos = *(int *)(args->args[0]);
 
     double keyLen;
     char *const keyBytes = getba(args, 1, keyLen);
@@ -54,7 +55,8 @@ my_bool FHInsert_init(UDF_INIT *initid, UDF_ARGS *args, char *message)
     start_update = -1;
     end_update = -1;
     update.clear();
-    if (root == nullptr) {
+    if (root == nullptr)
+    {
         root_initial();
     }
     return 0;
@@ -63,10 +65,10 @@ my_bool FHInsert_init(UDF_INIT *initid, UDF_ARGS *args, char *message)
 /*搜索*/
 double
 FHSearch(UDF_INIT *const initid, UDF_ARGS *const args,
-                         char *const result, unsigned long *const length,
-                         char *const is_null, char *const error)
+         char *const result, unsigned long *const length,
+         char *const is_null, char *const error)
 {
-    int pos=*(int*)(args->args[0]);
+    int pos = *(int *)(args->args[0]);
     return root->search(pos);
 }
 /*
@@ -77,9 +79,9 @@ my_bool FHSearch_init(UDF_INIT* initid, UDF_ARGS* args, char* message)
 */
 my_bool
 FHSearch_init(UDF_INIT *const initid, UDF_ARGS *const args,
-                              char *const message)
+              char *const message)
 {
-    
+
     return 0;
 }
 
