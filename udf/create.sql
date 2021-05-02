@@ -87,13 +87,19 @@ CREATE FUNCTION FHEnd RETURNS REAL SONAME 'ope.so';
 
 -- ! Create a procedure that supports the insert of frequency-hiding order-preserving encryption scheme.
 delimiter //
-CREATE PROCEDURE PRO_INSERT (IN pos int, IN ct varchar(128), IN table_name varchar(128)) BEGIN
-  DECLARE cd INT DEFAULT 0;
+CREATE PROCEDURE pro_insert(IN pos int, IN ct varchar(128), IN table_name varchar(128)) BEGIN
+  DECLARE cd DOUBLE DEFAULT 0;
   SET cd = FHInsert(pos, ct); -- Be aware of the function name.
-  INSERT INTO table_name VALUES (ct, cd);
-  IF cd < 1 THEN 
-    UPDATE table_name SET encoding = FHUpdate(ciphertext) WHERE encoding > FHStart() AND encoding <= FHEnd();
-  END
-delimiter ;
+  SET @query = CONCAT_WS(" ", "INSERT INTO", table_name, "VALUES", "(", cd, ", '" , ct, "')");
 
--- TODO: CREATE FUNCTION specified in edb.so
+  PREPARE ex FROM @query;
+  EXECUTE ex;
+
+  IF cd < 1 THEN
+    SET @query = CONCAT_WS(" ", "UPDATE", table_name, "SET encoding = FHUpdate(ciphertext) WHERE (encoding > FHStart() AND encoding <= FHEnd()) OR (encoding = -1)");
+    PREPARE ex FROM @query;
+    EXECUTE ex;
+
+  END IF;
+END //
+delimiter ;

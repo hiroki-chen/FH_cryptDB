@@ -106,7 +106,10 @@ def insert_ciphertext():
             i = 0
             for insertkey in getData(datapath + attr + str(num) + ".txt"):
                 i = i+1
+
+                # The client side will generate the position and corresponding ciphertext of a plaintext. Note that this is done on the client side!!
                 pos, ciphertext = opec.insert_udf(insertkey)
+                
                 sql = "call pro_insert(%d,\"%s\");" % (pos, str(ciphertext))
                 cursor.execute(sql)
                 if i == 100 or i == 1000 or i == 10000 or i == 100000 or i == 1000000 or i == 10000000:
