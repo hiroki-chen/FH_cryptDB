@@ -6,7 +6,8 @@
 #include <main/macro_util.hh>
 #include <parser/lex_util.hh>
 
-class CreateTableHandler : public DDLHandler {
+class CreateTableHandler : public DDLHandler
+{
     virtual LEX *rewriteAndUpdate(Analysis &a, LEX *lex,
                                   const ProxyState &ps) const
     {
@@ -18,26 +19,30 @@ class CreateTableHandler : public DDLHandler {
         LEX *const new_lex = copyWithTHD(lex);
 
         //TODO: support for "create table like"
-        if (lex->create_info.options & HA_LEX_CREATE_TABLE_LIKE) {
+        if (lex->create_info.options & HA_LEX_CREATE_TABLE_LIKE)
+        {
             cryptdb_err() << "No support for create table like yet. "
                           << "If you see this, please implement me";
         }
 
         // Create the table regardless of 'IF NOT EXISTS' if the table
         // doesn't exist.
-        if (false == a.tableMetaExists(db_name, table)) {
+        if (false == a.tableMetaExists(db_name, table))
+        {
             // TODO: Use appropriate values for has_sensitive and has_salt.
-        	std::unique_ptr<TableMeta> tm;
-        	// If table name begind with "fh_", then it has no salt (which is implemented by CryptDB default)
-        	if (0 == table.compare(FH_IDENTIFIER)) {
-        		tm = std::move(std::unique_ptr<TableMeta>(new TableMeta(true, false)));
-        	} else {
-        		tm = std::move(std::unique_ptr<TableMeta>(new TableMeta(true, true)));
-        	}
-
+            std::unique_ptr<TableMeta> tm;
+            // If table name begind with "fh_", then it has no salt (which is implemented by CryptDB default)
+            if (0 == table.compare(FH_IDENTIFIER))
+            {
+                tm = std::move(std::unique_ptr<TableMeta>(new TableMeta(true, false)));
+            }
+            else
+            {
+                tm = std::move(std::unique_ptr<TableMeta>(new TableMeta(true, true)));
+            }
 
             // -----------------------------
-            //         Rewrite TABLE       
+            //         Rewrite TABLE
             // -----------------------------
             // HACK.
             // > We know that there is only one table.
@@ -64,11 +69,11 @@ class CreateTableHandler : public DDLHandler {
 
             new_lex->alter_info.create_list =
                 accumList<Create_field>(it,
-                    [&a, &ps, &tm, &table] (List<Create_field> out_list,
-                                    Create_field *const cf) {
-                        return createAndRewriteField(a, ps, cf, tm.get(),
-                                                     true, out_list, table);
-                });
+                                        [&a, &ps, &tm, &table](List<Create_field> out_list,
+                                                               Create_field *const cf) {
+                                            return createAndRewriteField(a, ps, cf, tm.get(),
+                                                                         true, out_list, table);
+                                        });
 
             // -----------------------------
             //         Rewrite INDEX
@@ -77,22 +82,23 @@ class CreateTableHandler : public DDLHandler {
                 List_iterator<Key>(lex->alter_info.key_list);
             new_lex->alter_info.key_list =
                 accumList<Key>(key_it,
-                    [&tm, &a] (List<Key> out_list, Key *const key)
-                    {
-                        auto keys = rewrite_key(*tm.get(), key, a);
-                        out_list.concat(vectorToListWithTHD(keys));
+                               [&tm, &a](List<Key> out_list, Key *const key) {
+                                   auto keys = rewrite_key(*tm.get(), key, a);
+                                   out_list.concat(vectorToListWithTHD(keys));
 
-                        return out_list;
-                    });
+                                   return out_list;
+                               });
 
             // -----------------------------
-            //         Update TABLE       
+            //         Update TABLE
             // -----------------------------
             a.deltas.push_back(std::unique_ptr<Delta>(
-                            new CreateDelta(std::move(tm),
-                                            a.getDatabaseMeta(db_name),
-                                            IdentityMetaKey(table))));
-        } else { // Table already exists.
+                new CreateDelta(std::move(tm),
+                                a.getDatabaseMeta(db_name),
+                                IdentityMetaKey(table))));
+        }
+        else
+        { // Table already exists.
 
             // Make sure we aren't trying to create a table that
             // already exists.
@@ -102,7 +108,7 @@ class CreateTableHandler : public DDLHandler {
                                   "Table " + table + " already exists!");
 
             // -----------------------------
-            //         Rewrite TABLE       
+            //         Rewrite TABLE
             // -----------------------------
             new_lex->select_lex.table_list =
                 rewrite_table_list(lex->select_lex.table_list, a);
@@ -129,7 +135,8 @@ class CreateTableHandler : public DDLHandler {
 //   > Must guarentee that rewrite_table_list is only called one time.
 //   > If we drop Keys and Columns in the same query the order is probably
 //     going to get changed.
-class AlterTableHandler : public DDLHandler {
+class AlterTableHandler : public DDLHandler
+{
     virtual LEX *rewriteAndUpdate(Analysis &a, LEX *lex,
                                   const ProxyState &ps) const
     {
@@ -139,7 +146,8 @@ class AlterTableHandler : public DDLHandler {
 
         LEX *new_lex = copyWithTHD(lex);
 
-        for (auto it : handlers) {
+        for (auto it : handlers)
+        {
             new_lex = it->transformLex(a, new_lex, ps);
         }
 
@@ -160,7 +168,8 @@ public:
     AlterTableHandler() : sub_dispatcher(buildAlterSubDispatcher()) {}
 };
 
-class DropTableHandler : public DDLHandler {
+class DropTableHandler : public DDLHandler
+{
     virtual LEX *rewriteAndUpdate(Analysis &a, LEX *lex,
                                   const ProxyState &ps) const
     {
@@ -169,7 +178,7 @@ class DropTableHandler : public DDLHandler {
 
         return final_lex;
     }
-    
+
     LEX *rewrite(Analysis &a, LEX *lex, const ProxyState &ps) const
     {
         LEX *const new_lex = copyWithTHD(lex);
@@ -182,12 +191,15 @@ class DropTableHandler : public DDLHandler {
     void update(Analysis &a, LEX *lex, const ProxyState &ps) const
     {
         TABLE_LIST *tbl = lex->select_lex.table_list.first;
-        for (; tbl; tbl = tbl->next_local) {
-            char* table  = tbl->table_name;
+        for (; tbl; tbl = tbl->next_local)
+        {
+            char *table = tbl->table_name;
 
             TEST_DatabaseDiscrepancy(tbl->db, a.getDatabaseName());
-            if (lex->drop_if_exists) {
-                if (false == a.tableMetaExists(tbl->db, table)) {
+            if (lex->drop_if_exists)
+            {
+                if (false == a.tableMetaExists(tbl->db, table))
+                {
                     continue;
                 }
             }
@@ -195,8 +207,8 @@ class DropTableHandler : public DDLHandler {
             // Remove from *Meta structures.
             TableMeta const &tm = a.getTableMeta(tbl->db, table);
             a.deltas.push_back(std::unique_ptr<Delta>(
-                            new DeleteDelta(tm,
-                                            a.getDatabaseMeta(tbl->db))));
+                new DeleteDelta(tm,
+                                a.getDatabaseMeta(tbl->db))));
             std::string dir = "CryptDB_DATA/";
             dir.append(a.getDatabaseName() + "/");
             dir.append((std::string)(table));
@@ -206,29 +218,34 @@ class DropTableHandler : public DDLHandler {
     }
 };
 
-class CreateDBHandler : public DDLHandler {
+class CreateDBHandler : public DDLHandler
+{
     virtual LEX *rewriteAndUpdate(Analysis &a, LEX *const lex,
                                   const ProxyState &ps) const
     {
         const std::string dbname =
             convert_lex_str(lex->name);
-        if (false == a.databaseMetaExists(dbname)) {
+        if (false == a.databaseMetaExists(dbname))
+        {
             std::unique_ptr<DatabaseMeta> dm(new DatabaseMeta());
             a.deltas.push_back(std::unique_ptr<Delta>(
-                        new CreateDelta(std::move(dm), a.getSchema(),
-                                        IdentityMetaKey(dbname))));
-        } else {
+                new CreateDelta(std::move(dm), a.getSchema(),
+                                IdentityMetaKey(dbname))));
+        }
+        else
+        {
             const bool test =
                 lex->create_info.options & HA_LEX_CREATE_IF_NOT_EXISTS;
             TEST_TextMessageError(test,
-                                "Database " + dbname + " already exists!");
+                                  "Database " + dbname + " already exists!");
         }
 
         return copyWithTHD(lex);
     }
 };
 
-class ChangeDBHandler : public DDLHandler {
+class ChangeDBHandler : public DDLHandler
+{
     virtual LEX *rewriteAndUpdate(Analysis &a, LEX *const lex,
                                   const ProxyState &ps) const
     {
@@ -236,7 +253,8 @@ class ChangeDBHandler : public DDLHandler {
     }
 };
 
-class DropDBHandler : public DDLHandler {
+class DropDBHandler : public DDLHandler
+{
     virtual LEX *rewriteAndUpdate(Analysis &a, LEX *const lex,
                                   const ProxyState &ps) const
     {
@@ -244,13 +262,14 @@ class DropDBHandler : public DDLHandler {
             convert_lex_str(lex->name);
         DatabaseMeta &dm = a.getDatabaseMeta(dbname);
         a.deltas.push_back(std::unique_ptr<Delta>(
-                                    new DeleteDelta(dm, a.getSchema())));
+            new DeleteDelta(dm, a.getSchema())));
 
         return copyWithTHD(lex);
     }
 };
 
-class LockTablesHandler : public DDLHandler {
+class LockTablesHandler : public DDLHandler
+{
     virtual LEX *rewriteAndUpdate(Analysis &a, LEX *const lex,
                                   const ProxyState &ps) const
     {

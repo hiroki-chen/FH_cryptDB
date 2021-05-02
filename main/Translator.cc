@@ -25,12 +25,13 @@ getpRandomName()
     static int out_length = 10;
     char output[out_length + 1];
 
-    std::function<bool()> wrap_srand =[](){srand(time(NULL)); return true;};
-    std::function<void(bool)> do_nothing = [] (bool b) {return;};
+    std::function<bool()> wrap_srand = []() {srand(time(NULL)); return true; };
+    std::function<void(bool)> do_nothing = [](bool b) { return; };
     static bool danger_will_robinson = wrap_srand();
     do_nothing(danger_will_robinson);
 
-    for (int i = 0; i < out_length; ++i) {
+    for (int i = 0; i < out_length; ++i)
+    {
         output[i] = valids[rand() % strlen(valids)];
     }
     output[out_length] = 0;
@@ -39,14 +40,17 @@ getpRandomName()
 }
 
 std::string
-nextAutoInc(std::map<std::string, unsigned int > & autoInc,
+nextAutoInc(std::map<std::string, unsigned int> &autoInc,
             std::string fullname)
 {
     std::string val;
-    if (autoInc.find(fullname) == autoInc.end()) {
+    if (autoInc.find(fullname) == autoInc.end())
+    {
         val = "1";
         autoInc[fullname] = 1;
-    } else {
+    }
+    else
+    {
         autoInc[fullname] += 1;
         val = strFromVal(autoInc[fullname]);
     }
@@ -55,17 +59,21 @@ nextAutoInc(std::map<std::string, unsigned int > & autoInc,
 }
 
 std::string
-getTableSalt(std::string anonTableName) {
+getTableSalt(std::string anonTableName)
+{
     return BASE_SALT_NAME + "_t_" + anonTableName;
 }
 
-bool
-isSalt(std::string id, bool & isTableSalt)
+bool isSalt(std::string id, bool &isTableSalt)
 {
-    if (id.find(BASE_SALT_NAME) == 0 || (isTableField(id) && (getField(id).find(BASE_SALT_NAME) == 0))) {
-        if (id.find(BASE_SALT_NAME+"_t_") == 0) {
+    if (id.find(BASE_SALT_NAME) == 0 || (isTableField(id) && (getField(id).find(BASE_SALT_NAME) == 0)))
+    {
+        if (id.find(BASE_SALT_NAME + "_t_") == 0)
+        {
             isTableSalt = true;
-        } else {
+        }
+        else
+        {
             isTableSalt = false;
         }
         return true;
@@ -75,22 +83,22 @@ isSalt(std::string id, bool & isTableSalt)
 }
 
 std::string
-getTableOfSalt(std::string salt_name) {
+getTableOfSalt(std::string salt_name)
+{
 
     return salt_name.substr(BASE_SALT_NAME.length() + 3, salt_name.length() - 3 - BASE_SALT_NAME.length());
 }
 
-
-
 std::string
-getFieldsItSelect(std::list<std::string> & words,
-                  std::list<std::string>::iterator & it)
+getFieldsItSelect(std::list<std::string> &words,
+                  std::list<std::string>::iterator &it)
 {
     it = words.begin();
     it++;
     std::string res = "SELECT ";
 
-    if (equalsIgnoreCase(*it, "distinct")) {
+    if (equalsIgnoreCase(*it, "distinct"))
+    {
         LOG(edb_v) << "has distinct!";
         it++;
         res += "DISTINCT ";
@@ -107,10 +115,13 @@ getFieldsItSelect(std::list<std::string> & words,
 std::string
 getField(std::string tablefield)
 {
-    if (isTableField(tablefield)) {
+    if (isTableField(tablefield))
+    {
         size_t pos = tablefield.find(".");
-        return tablefield.substr(pos+1, tablefield.length() - pos - 1);
-    } else {
+        return tablefield.substr(pos + 1, tablefield.length() - pos - 1);
+    }
+    else
+    {
         return tablefield;
     }
 }
@@ -118,11 +129,13 @@ getField(std::string tablefield)
 std::string
 getTable(std::string tablefield)
 {
-    if (isTableField(tablefield)) {
+    if (isTableField(tablefield))
+    {
         size_t pos = tablefield.find(".");
         return tablefield.substr(0, pos);
-    } else {
+    }
+    else
+    {
         return "";
     }
 }
-

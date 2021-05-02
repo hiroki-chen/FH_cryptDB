@@ -22,12 +22,13 @@
 #include <util/enum_text.hh>
 #include <parser/lex_util.hh>
 
-// gives names to classes and objects we don't care to know the name of 
-#define ANON                ANON_NAME(__anon_id_func_)
+// gives names to classes and objects we don't care to know the name of
+#define ANON ANON_NAME(__anon_id_func_)
 
 template <class T>
 static Item *
-do_optimize_type_self_and_args(T *i, Analysis &a) {
+do_optimize_type_self_and_args(T *i, Analysis &a)
+{
     UNIMPLEMENTED;
     /*
     Item *i0 = do_optimize_const_item(i, a);
@@ -44,8 +45,6 @@ do_optimize_type_self_and_args(T *i, Analysis &a) {
     }*/
 }
 
-
-
 template <class T>
 static T *
 rewrite_args_FN(const T &i, const OLK &constr,
@@ -58,7 +57,8 @@ rewrite_args_FN(const T &i, const OLK &constr,
     out_i->set_arguments(*arg_list);
 
     Item **const args = out_i->arguments();
-    for (uint x = 0; x < count; x++) {
+    for (uint x = 0; x < count; x++)
+    {
         args[x] =
             itemTypes.do_rewrite(*args[x], rp.olk,
                                  *rp.childr_rp[x].get(), a);
@@ -87,34 +87,34 @@ typical_gather(Analysis &a, const Item_func &i, const EncSet &my_es,
     Item *const *const args = i.arguments();
 
     // FIXME: for frequency smoothing it won't work.
-    std::vector<std::shared_ptr<RewritePlan> >
+    std::vector<std::shared_ptr<RewritePlan>>
         childr_rp({std::shared_ptr<RewritePlan>(gather(*args[0], a)),
                    std::shared_ptr<RewritePlan>(gather(*args[1], a))});
 
     const EncSet solution =
-        my_es.intersect(childr_rp[0]->es_out).
-              intersect(childr_rp[1]->es_out);
+        my_es.intersect(childr_rp[0]->es_out).intersect(childr_rp[1]->es_out);
     TEST_NoAvailableEncSet(solution, i.type(), my_es, why,
                            childr_rp);
 
-    std::function<EncSet ()> getEncSet =
-        [encset_from_intersection, solution] ()
-    {
-        if (encset_from_intersection) {
-            assert_s(solution.single_crypted_and_or_plainvals(),
-                     "can't use typical_gather with more outgoing"
-                        " encsets");
-            return solution;
-        } else {
-            return PLAIN_EncSet;
-        }
-    };
+    std::function<EncSet()> getEncSet =
+        [encset_from_intersection, solution]() {
+            if (encset_from_intersection)
+            {
+                assert_s(solution.single_crypted_and_or_plainvals(),
+                         "can't use typical_gather with more outgoing"
+                         " encsets");
+                return solution;
+            }
+            else
+            {
+                return PLAIN_EncSet;
+            }
+        };
 
     const EncSet out_es = getEncSet();
     const reason rsn(out_es, why, i);
 
     return new RewritePlanOneOLK(out_es, solution.chooseOne(), childr_rp, rsn);
-
 }
 
 static RewritePlan *
@@ -124,11 +124,12 @@ iterateGather(const Item_func &i, const EncSet &out_es, EncSet child_es,
     const reason rsn(out_es, why, i);
 
     const unsigned int arg_count = i.argument_count();
-    std::vector<std::shared_ptr<RewritePlan> > childr_rp(arg_count);
-    Item *const * const args = i.arguments();
-    for (unsigned int index = 0; index < arg_count; ++index) {
+    std::vector<std::shared_ptr<RewritePlan>> childr_rp(arg_count);
+    Item *const *const args = i.arguments();
+    for (unsigned int index = 0; index < arg_count; ++index)
+    {
         childr_rp[index] =
-            std::shared_ptr<RewritePlan>(gather(*args[index],a));
+            std::shared_ptr<RewritePlan>(gather(*args[index], a));
         child_es = child_es.intersect(childr_rp[index]->es_out);
     }
 
@@ -146,32 +147,37 @@ allPlainIterateGather(const Item_func &i, const std::string &why,
     return iterateGather(i, out_es, child_es, why, a);
 }
 
-static class ANON : public CItemSubtypeFT<Item_func_neg, Item_func::Functype::NEG_FUNC> {
+static class ANON : public CItemSubtypeFT<Item_func_neg, Item_func::Functype::NEG_FUNC>
+{
     virtual RewritePlan *
     do_gather_type(const Item_func_neg &i, Analysis &a) const
     {
         TEST_BadItemArgumentCount(i.type(), 1, i.argument_count());
 
         auto arg = i.arguments()[0];
-        if (arg->type() == Item::Type::FIELD_ITEM) {
+        if (arg->type() == Item::Type::FIELD_ITEM)
+        {
             const EncSet out_es = PLAIN_EncSet;
             const EncSet child_es = PLAIN_EncSet;
             const std::string why = "neg";
 
             return iterateGather(i, out_es, child_es, why, a);
-        } else if (arg->type() == Item::Type::INT_ITEM
-                   || arg->type() == Item::Type::FIELD_ITEM) {
+        }
+        else if (arg->type() == Item::Type::INT_ITEM || arg->type() == Item::Type::FIELD_ITEM)
+        {
             const EncSet out_es = FULL_EncSet_Int;
             const EncSet child_es = FULL_EncSet_Int;
             const std::string why = "neg";
 
             return iterateGather(i, out_es, child_es, why, a);
-        } else {
+        }
+        else
+        {
             FAIL_TextMessageError("Unsupported NEG!");
         }
     }
 
-    virtual Item * do_optimize_type(Item_func_neg *i, Analysis & a) const
+    virtual Item *do_optimize_type(Item_func_neg *i, Analysis &a) const
     {
         return do_optimize_type_self_and_args(i, a);
     }
@@ -191,28 +197,34 @@ static class ANON : public CItemSubtypeFT<Item_func_neg, Item_func::Functype::NE
         const RewritePlanOneOLK &rp_one =
             static_cast<const RewritePlanOneOLK &>(rp);
 
-        if (oDET == constr.o) {
+        if (oDET == constr.o)
+        {
             const Item *const arg = i.arguments()[0];
             TEST_TextMessageError(arg->type() == Item::Type::INT_ITEM,
                                   "Must use Integer type with NEG!");
             const Item_int *const int_arg =
-                static_cast<const Item_int * >(arg);
+                static_cast<const Item_int *>(arg);
 
             // Negate the old value, so that it can be encrypted.
             const Item *const neg_i = new Item_int(-int_arg->value);
 
             return itemTypes.do_rewrite(*neg_i, constr,
                                         *rp_one.childr_rp[0].get(), a);
-        } else if (oPLAIN == constr.o) {
+        }
+        else if (oPLAIN == constr.o)
+        {
             return rewrite_args_FN(i, constr, rp_one, a);
-        } else {
+        }
+        else
+        {
             FAIL_TextMessageError("Bad onion for NEG!");
         }
     }
 } ANON;
 
 static class ANON : public CItemSubtypeFT<Item_func_not,
-                                          Item_func::Functype::NOT_FUNC> {
+                                          Item_func::Functype::NOT_FUNC>
+{
     virtual RewritePlan *
     do_gather_type(const Item_func_not &i, Analysis &a) const
     {
@@ -223,7 +235,7 @@ static class ANON : public CItemSubtypeFT<Item_func_not,
         return iterateGather(i, out_es, child_es, why, a);
     }
 
-    virtual Item * do_optimize_type(Item_func_not *i, Analysis & a) const
+    virtual Item *do_optimize_type(Item_func_not *i, Analysis &a) const
     {
         return do_optimize_type_self_and_args(i, a);
     }
@@ -239,9 +251,9 @@ static class ANON : public CItemSubtypeFT<Item_func_not,
     }
 } ANON;
 
-
-template<Item_func::Functype FT, class IT>
-class CItemCompare : public CItemSubtypeFT<Item_func, FT> {
+template <Item_func::Functype FT, class IT>
+class CItemCompare : public CItemSubtypeFT<Item_func, FT>
+{
     virtual RewritePlan *
     do_gather_type(const Item_func &i, Analysis &a) const
     {
@@ -258,36 +270,40 @@ class CItemCompare : public CItemSubtypeFT<Item_func, FT> {
 
         std::string why;
 
-        std::function<EncSet ()> getEncSet =
-            [&why, &i, &need_fh] ()
-        {
-            if (FT == Item_func::Functype::EQ_FUNC ||
-                FT == Item_func::Functype::EQUAL_FUNC ||
-                FT == Item_func::Functype::NE_FUNC) {
-                why = "compare equality";
+        std::function<EncSet()> getEncSet =
+            [&why, &i, &need_fh]() {
+                if (FT == Item_func::Functype::EQ_FUNC ||
+                    FT == Item_func::Functype::EQUAL_FUNC ||
+                    FT == Item_func::Functype::NE_FUNC)
+                {
+                    why = "compare equality";
 
-                Item *const *const args = i.arguments();
-                if (!args[0]->const_item() && !args[1]->const_item()) {
-                    why = why + "; join";
-                    std::cerr << "join";
-                    return JOIN_EncSet;     /* lambda */
-                } else {
-                    return need_fh ? FH_EQ_EncSet : EQ_EncSet;       /* lambda */
+                    Item *const *const args = i.arguments();
+                    if (!args[0]->const_item() && !args[1]->const_item())
+                    {
+                        why = why + "; join";
+                        std::cerr << "join";
+                        return JOIN_EncSet; /* lambda */
+                    }
+                    else
+                    {
+                        return need_fh ? FH_EQ_EncSet : EQ_EncSet; /* lambda */
+                    }
                 }
-            } else {
-                why = "compare order";
-                return need_fh ? FH_ORD_EncSet : ORD_EncSet;          /* lambda */
-            }
-        };
+                else
+                {
+                    why = "compare order";
+                    return need_fh ? FH_ORD_EncSet : ORD_EncSet; /* lambda */
+                }
+            };
         const EncSet my_es = getEncSet();
 
         TEST_BadItemArgumentCount(i.type(), 2, i.argument_count());
 
-
         return typical_gather(a, i, my_es, why, false, PLAIN_EncSet);
     }
 
-    virtual Item * do_optimize_type(Item_func *i, Analysis & a) const
+    virtual Item *do_optimize_type(Item_func *i, Analysis &a) const
     {
         return do_optimize_type_self_and_args(i, a);
     }
@@ -308,16 +324,17 @@ class CItemCompare : public CItemSubtypeFT<Item_func, FT> {
     }
 };
 
-static CItemCompare<Item_func::Functype::EQ_FUNC,    Item_func_eq>    ANON;
+static CItemCompare<Item_func::Functype::EQ_FUNC, Item_func_eq> ANON;
 static CItemCompare<Item_func::Functype::EQUAL_FUNC, Item_func_equal> ANON;
-static CItemCompare<Item_func::Functype::NE_FUNC,    Item_func_ne>    ANON;
-static CItemCompare<Item_func::Functype::GT_FUNC,    Item_func_gt>    ANON;
-static CItemCompare<Item_func::Functype::GE_FUNC,    Item_func_ge>    ANON;
-static CItemCompare<Item_func::Functype::LT_FUNC,    Item_func_lt>    ANON;
-static CItemCompare<Item_func::Functype::LE_FUNC,    Item_func_le>    ANON;
+static CItemCompare<Item_func::Functype::NE_FUNC, Item_func_ne> ANON;
+static CItemCompare<Item_func::Functype::GT_FUNC, Item_func_gt> ANON;
+static CItemCompare<Item_func::Functype::GE_FUNC, Item_func_ge> ANON;
+static CItemCompare<Item_func::Functype::LT_FUNC, Item_func_lt> ANON;
+static CItemCompare<Item_func::Functype::LE_FUNC, Item_func_le> ANON;
 
-template<Item_func::Functype FT, class IT>
-class CItemCond : public CItemSubtypeFT<Item_cond, FT> {
+template <Item_func::Functype FT, class IT>
+class CItemCond : public CItemSubtypeFT<Item_cond, FT>
+{
     virtual RewritePlan *
     do_gather_type(const Item_cond &i, Analysis &a) const
     {
@@ -336,8 +353,9 @@ class CItemCond : public CItemSubtypeFT<Item_cond, FT> {
         auto it =
             RiboldMYSQL::constList_iterator<Item>(*RiboldMYSQL::argument_list(i));
         unsigned int index = 0;
-        for (;;) {
-            const Item * const argitem = it++;
+        for (;;)
+        {
+            const Item *const argitem = it++;
             if (!argitem)
                 break;
             assert(index < arg_count);
@@ -357,7 +375,8 @@ class CItemCond : public CItemSubtypeFT<Item_cond, FT> {
         return new RewritePlanPerChildOLK(out_es, out_child_olks, rsn);
     }
 
-    virtual Item * do_optimize_type(Item_cond *i, Analysis & a) const {
+    virtual Item *do_optimize_type(Item_cond *i, Analysis &a) const
+    {
         return do_optimize_type_self_and_args(i, a);
     }
 
@@ -373,9 +392,11 @@ class CItemCond : public CItemSubtypeFT<Item_cond, FT> {
         auto it = RiboldMYSQL::constList_iterator<Item>(*RiboldMYSQL::argument_list(i));
         List<Item> out_list;
         unsigned int index = 0;
-        for (;;) {
+        for (;;)
+        {
             const Item *const argitem = it++;
-            if (!argitem) {
+            if (!argitem)
+            {
                 break;
             }
             assert(index < arg_count);
@@ -397,17 +418,18 @@ class CItemCond : public CItemSubtypeFT<Item_cond, FT> {
 };
 
 static CItemCond<Item_func::Functype::COND_AND_FUNC, Item_cond_and> ANON;
-static CItemCond<Item_func::Functype::COND_OR_FUNC,  Item_cond_or>  ANON;
+static CItemCond<Item_func::Functype::COND_OR_FUNC, Item_cond_or> ANON;
 
-template<Item_func::Functype FT>
-class CItemNullcheck : public CItemSubtypeFT<Item_bool_func, FT> {
+template <Item_func::Functype FT>
+class CItemNullcheck : public CItemSubtypeFT<Item_bool_func, FT>
+{
     virtual RewritePlan *
     do_gather_type(const Item_bool_func &i, Analysis &a) const
     {
         Item *const *const args = i.arguments();
         TEST_BadItemArgumentCount(i.type(), 1, i.argument_count());
 
-        std::vector<std::shared_ptr<RewritePlan> >
+        std::vector<std::shared_ptr<RewritePlan>>
             child_rp({std::shared_ptr<RewritePlan>(gather(*args[0], a))});
 
         const EncSet solution = child_rp[0]->es_out;
@@ -430,7 +452,7 @@ class CItemNullcheck : public CItemSubtypeFT<Item_bool_func, FT> {
                                a);
     }
 
-    virtual Item * do_optimize_type(Item_bool_func *i, Analysis & a) const
+    virtual Item *do_optimize_type(Item_bool_func *i, Analysis &a) const
     {
         return do_optimize_type_self_and_args(i, a);
     }
@@ -439,7 +461,8 @@ class CItemNullcheck : public CItemSubtypeFT<Item_bool_func, FT> {
 static CItemNullcheck<Item_func::Functype::ISNULL_FUNC> ANON;
 static CItemNullcheck<Item_func::Functype::ISNOTNULL_FUNC> ANON;
 
-static class ANON : public CItemSubtypeFT<Item_func_get_system_var, Item_func::Functype::GSYSVAR_FUNC> {
+static class ANON : public CItemSubtypeFT<Item_func_get_system_var, Item_func::Functype::GSYSVAR_FUNC>
+{
 
     virtual RewritePlan *
     do_gather_type(const Item_func_get_system_var &i, Analysis &a) const
@@ -458,8 +481,9 @@ static class ANON : public CItemSubtypeFT<Item_func_get_system_var, Item_func::F
     }
 } ANON;
 
-template<class IT, const char *NAME>
-class CItemAdditive : public CItemSubtypeFN<IT, NAME> {
+template <class IT, const char *NAME>
+class CItemAdditive : public CItemSubtypeFN<IT, NAME>
+{
     virtual RewritePlan *
     do_gather_type(const IT &i, Analysis &a) const
     {
@@ -467,7 +491,7 @@ class CItemAdditive : public CItemSubtypeFN<IT, NAME> {
         return typical_gather(a, i, ADD_EncSet, why, true);
     }
 
-    virtual Item * do_optimize_type(IT *i, Analysis & a) const
+    virtual Item *do_optimize_type(IT *i, Analysis &a) const
     {
         return do_optimize_type_self_and_args(i, a);
     }
@@ -495,14 +519,17 @@ class CItemAdditive : public CItemSubtypeFN<IT, NAME> {
             itemTypes.do_rewrite(*args[1], constr,
                                  *rp.childr_rp[1].get(), a);
 
-        if (oAGG == constr.o) {
+        if (oAGG == constr.o)
+        {
             OnionMeta *const om = rp.olk.key->getOnionMeta(oAGG);
             assert(om);
             EncLayer const &el = a.getBackEncLayer(*om);
             TEST_UnexpectedSecurityLevel(oAGG, SECLEVEL::HOM,
                                          el.level());
             return static_cast<const HOM &>(el).sumUDF(arg0, arg1);
-        } else {
+        }
+        else
+        {
             return new IT(arg0, arg1);
         }
     }
@@ -514,23 +541,24 @@ static CItemAdditive<Item_func_plus, str_plus> ANON;
 extern const char str_minus[] = "-";
 static CItemAdditive<Item_func_minus, str_minus> ANON;
 
-template<class IT, const char *NAME>
-class CItemMath : public CItemSubtypeFN<IT, NAME> {
+template <class IT, const char *NAME>
+class CItemMath : public CItemSubtypeFN<IT, NAME>
+{
     virtual RewritePlan *
-    do_gather_type(const IT &i, Analysis & a) const
+    do_gather_type(const IT &i, Analysis &a) const
     {
         const std::string why = NAME;
         return typical_gather(a, i, PLAIN_EncSet, why, true);
     }
 
-    virtual Item * do_optimize_type(IT *i, Analysis & a) const
+    virtual Item *do_optimize_type(IT *i, Analysis &a) const
     {
         return do_optimize_type_self_and_args(i, a);
     }
 
     virtual Item *
     do_rewrite_type(const IT &i, const OLK &constr,
-                    const RewritePlan &_rp, Analysis & a) const
+                    const RewritePlan &_rp, Analysis &a) const
     {
         TEST_BadItemArgumentCount(i.type(), 2, i.argument_count());
         Item *const *const args = i.arguments();
@@ -581,11 +609,11 @@ static CItemMath<Item_func_log, str_log> ANON;
 // extern const char str_radians[] = "radians";
 // static CItemMath<str_radians> ANON;
 
-
 // FIXME: Use encryption/rewriting.
 // FIXME: Determine if we are dealing with arguments correctly.
-template<const char *NAME>
-class CItemLeafFunc : public CItemSubtypeFN<Item_func, NAME> {
+template <const char *NAME>
+class CItemLeafFunc : public CItemSubtypeFN<Item_func, NAME>
+{
     virtual RewritePlan *
     do_gather_type(const Item_func &i, Analysis &a) const
     {
@@ -616,25 +644,26 @@ static CItemLeafFunc<str_rand> ANON;
 extern const char str_database[] = "database";
 static CItemLeafFunc<str_database> ANON;
 
-
-static class ANON : public CItemSubtypeFT<Item_extract, Item_func::Functype::EXTRACT_FUNC> {
+static class ANON : public CItemSubtypeFT<Item_extract, Item_func::Functype::EXTRACT_FUNC>
+{
     virtual RewritePlan *
     do_gather_type(const Item_extract &i, Analysis &a) const
     {
-    /*  analyze(i->arguments()[0], reason(EMPTY_EncSet, "extract", i, &tr), a);
+        /*  analyze(i->arguments()[0], reason(EMPTY_EncSet, "extract", i, &tr), a);
         return tr.encset;
     */
         UNIMPLEMENTED;
     }
-    virtual Item * do_optimize_type(Item_extract *i, Analysis & a) const
+    virtual Item *do_optimize_type(Item_extract *i, Analysis &a) const
     {
         return do_optimize_type_self_and_args(i, a);
     }
 } ANON;
 
 // FIXME: Use encryption/rewriting.
-template<const char *NAME>
-class CItemDateExtractFunc : public CItemSubtypeFN<Item_func, NAME> {
+template <const char *NAME>
+class CItemDateExtractFunc : public CItemSubtypeFN<Item_func, NAME>
+{
     virtual RewritePlan *
     do_gather_type(const Item_func &i, Analysis &a) const
     {
@@ -691,8 +720,9 @@ static CItemDateExtractFunc<str_unix_timestamp> ANON;
 extern const char str_date_format[] = "date_format";
 static CItemDateExtractFunc<str_date_format> ANON;
 
-template<const char *NAME>
-class CItemBitfunc : public CItemSubtypeFN<Item_func_bit, NAME> {
+template <const char *NAME>
+class CItemBitfunc : public CItemSubtypeFN<Item_func_bit, NAME>
+{
     virtual RewritePlan *
     do_gather_type(const Item_func_bit &i, Analysis &a) const
     {
@@ -703,7 +733,8 @@ class CItemBitfunc : public CItemSubtypeFN<Item_func_bit, NAME> {
         */
         UNIMPLEMENTED;
     }
-    virtual Item * do_optimize_type(Item_func_bit *i, Analysis & a) const {
+    virtual Item *do_optimize_type(Item_func_bit *i, Analysis &a) const
+    {
         return do_optimize_type_self_and_args(i, a);
     }
 };
@@ -720,7 +751,8 @@ static CItemBitfunc<str_bit_xor> ANON;
 extern const char str_bit_and[] = "&";
 static CItemBitfunc<str_bit_and> ANON;
 
-static class ANON : public CItemSubtypeFT<Item_func_like, Item_func::Functype::LIKE_FUNC> {
+static class ANON : public CItemSubtypeFT<Item_func_like, Item_func::Functype::LIKE_FUNC>
+{
     virtual RewritePlan *
     do_gather_type(const Item_func_like &i, Analysis &a) const
     {
@@ -728,7 +760,7 @@ static class ANON : public CItemSubtypeFT<Item_func_like, Item_func::Functype::L
         const std::string why = "like";
         return allPlainIterateGather(i, why, a);
 
-	/*
+        /*
 	LOG(cdb_v) << "Item_func do_gather_type " << *i;
 	Item **args = i->arguments();
 	assert_s(i->argument_count() == 2, "expecting LIKE to have two arguments");
@@ -761,7 +793,8 @@ static class ANON : public CItemSubtypeFT<Item_func_like, Item_func::Functype::L
 	*/
     }
 
-    virtual Item * do_optimize_type(Item_func_like *i, Analysis & a) const {
+    virtual Item *do_optimize_type(Item_func_like *i, Analysis &a) const
+    {
         return do_optimize_type_self_and_args(i, a);
     }
     virtual Item *
@@ -771,7 +804,7 @@ static class ANON : public CItemSubtypeFT<Item_func_like, Item_func::Functype::L
         const RewritePlanOneOLK &one_rp =
             static_cast<const RewritePlanOneOLK &>(rp);
         return rewrite_args_FN(i, constr, one_rp, a);
-/*	LOG(cdb_v) << "Item_func_like do_rewrite_type " << *i;
+        /*	LOG(cdb_v) << "Item_func_like do_rewrite_type " << *i;
 	assert_s(i->argument_count() == 2, "expecting LIKE to have two arguements");
 	Item **args = i->arguments();
 	if ((args[0]->type() == Item::Type::FIELD_ITEM) && (args[1]->type() == Item::Type::STRING_ITEM)) {
@@ -806,9 +839,10 @@ static class ANON : public CItemSubtypeFT<Item_func_like, Item_func::Functype::L
     }
 } ANON;
 
-
-static class ANON : public CItemSubtypeFT<Item_func, Item_func::Functype::FUNC_SP> {
-    void error(const Item_func &i) const __attribute__((noreturn)) {
+static class ANON : public CItemSubtypeFT<Item_func, Item_func::Functype::FUNC_SP>
+{
+    void error(const Item_func &i) const __attribute__((noreturn))
+    {
         thrower() << "unsupported stored procedure call "
                   << i << std::endl;
     }
@@ -819,18 +853,19 @@ static class ANON : public CItemSubtypeFT<Item_func, Item_func::Functype::FUNC_S
     }
 } ANON;
 
-static class ANON : public CItemSubtypeFT<Item_func_in, Item_func::Functype::IN_FUNC> {
+static class ANON : public CItemSubtypeFT<Item_func_in, Item_func::Functype::IN_FUNC>
+{
     virtual RewritePlan *
     do_gather_type(const Item_func_in &i, Analysis &a) const
     {
         const EncSet out_es = PLAIN_EncSet;
-        const EncSet child_es = EQ_EncSet; 
+        const EncSet child_es = EQ_EncSet;
         const std::string why = "in";
 
         return iterateGather(i, out_es, child_es, why, a);
     }
 
-    virtual Item * do_optimize_type(Item_func_in *i, Analysis & a) const
+    virtual Item *do_optimize_type(Item_func_in *i, Analysis &a) const
     {
         return do_optimize_type_self_and_args(i, a);
     }
@@ -846,17 +881,18 @@ static class ANON : public CItemSubtypeFT<Item_func_in, Item_func::Functype::IN_
 } ANON;
 
 static class ANON : public CItemSubtypeFT<Item_func_between,
-                                        Item_func::Functype::BETWEEN> {
+                                          Item_func::Functype::BETWEEN>
+{
     virtual RewritePlan *
     do_gather_type(const Item_func_between &i, Analysis &a) const
     {
         const EncSet out_es = PLAIN_EncSet;
-        const EncSet child_es = ORD_EncSet; 
+        const EncSet child_es = ORD_EncSet;
         const std::string why = "between";
 
         return iterateGather(i, out_es, child_es, why, a);
     }
-    virtual Item * do_optimize_type(Item_func_between *i, Analysis & a) const
+    virtual Item *do_optimize_type(Item_func_between *i, Analysis &a) const
     {
         return do_optimize_type_self_and_args(i, a);
     }
@@ -884,8 +920,9 @@ getArgs(Item_func * itf) {
 }
 */
 
-template<const char *FN, class IT>
-class CItemMinMax : public CItemSubtypeFN<Item_func_min_max, FN> {
+template <const char *FN, class IT>
+class CItemMinMax : public CItemSubtypeFN<Item_func_min_max, FN>
+{
     virtual RewritePlan *
     do_gather_type(const Item_func_min_max &i, Analysis &a) const
     {
@@ -897,10 +934,9 @@ class CItemMinMax : public CItemSubtypeFN<Item_func_min_max, FN> {
         assert_s(args[0]->const_item() || args[1]->const_item(),
                  "ope join not yet implemented");
 
-        std::vector<std::shared_ptr<RewritePlan> >
-            childr_rp({
-                std::shared_ptr<RewritePlan>(gather(*args[0], a)),
-                std::shared_ptr<RewritePlan>(gather(*args[1], a))});
+        std::vector<std::shared_ptr<RewritePlan>>
+            childr_rp({std::shared_ptr<RewritePlan>(gather(*args[0], a)),
+                       std::shared_ptr<RewritePlan>(gather(*args[1], a))});
         const EncSet es1 = childr_rp[0]->es_out;
         const EncSet es2 = childr_rp[1]->es_out;
         const EncSet needed_es = ORD_EncSet;
@@ -920,7 +956,7 @@ class CItemMinMax : public CItemSubtypeFN<Item_func_min_max, FN> {
     }
 
     virtual Item *do_optimize_type(Item_func_min_max *i,
-                                   Analysis & a) const
+                                   Analysis &a) const
     {
         return do_optimize_type_self_and_args(i, a);
     }
@@ -933,7 +969,8 @@ class CItemMinMax : public CItemSubtypeFN<Item_func_min_max, FN> {
         const RewritePlanOneOLK &rp =
             static_cast<const RewritePlanOneOLK &>(_rp);
 
-        if (SECLEVEL::PLAINVAL == rp.olk.l) { // no change
+        if (SECLEVEL::PLAINVAL == rp.olk.l)
+        { // no change
             return &const_cast<Item_func_min_max &>(i);
         }
 
@@ -948,21 +985,19 @@ class CItemMinMax : public CItemSubtypeFN<Item_func_min_max, FN> {
 
         const int cmp_sign =
             i.*rob<Item_func_min_max, int,
-                    &Item_func_min_max::cmp_sign>::ptr();
+                   &Item_func_min_max::cmp_sign>::ptr();
 
         Item *const cond =
-            cmp_sign ? static_cast<Item *>(new
-                            Item_func_gt(cond_arg0, cond_arg1))
-                     : static_cast<Item *>(new
-                            Item_func_lt(cond_arg0, cond_arg1));
+            cmp_sign ? static_cast<Item *>(new Item_func_gt(cond_arg0, cond_arg1))
+                     : static_cast<Item *>(new Item_func_lt(cond_arg0, cond_arg1));
 
         return new Item_func_if(cond,
                                 itemTypes.do_rewrite(*args[0], constr,
-                                                *rp.childr_rp[0].get(),
-                                                a),
+                                                     *rp.childr_rp[0].get(),
+                                                     a),
                                 itemTypes.do_rewrite(*args[1], constr,
-                                                *rp.childr_rp[1].get(),
-                                                a));
+                                                     *rp.childr_rp[1].get(),
+                                                     a));
     }
 };
 
@@ -974,31 +1009,30 @@ static CItemMinMax<str_greatest, Item_func_max> ANON;
 extern const char str_least[] = "least";
 static CItemMinMax<str_least, Item_func_min> ANON;
 
-
 extern const char str_strcmp[] = "strcmp";
-static class ANON : public CItemSubtypeFN<Item_func_strcmp, str_strcmp> {
+static class ANON : public CItemSubtypeFN<Item_func_strcmp, str_strcmp>
+{
     virtual RewritePlan *
     do_gather_type(const Item_func_strcmp &i, Analysis &a) const
     {
         //cerr << "do_a_t Item_func_strcmp reason " << tr << "\n";
-	/* Item **args = i->arguments();
+        /* Item **args = i->arguments();
         for (uint x = 0; x < i->argument_count(); x++)
             analyze(args[x], reason(EQ_EncSet, "strcmp", i, &tr), a);
         return tr.encset;
 	*/
         UNIMPLEMENTED;
     }
-    virtual Item * do_optimize_type(Item_func_strcmp *i, Analysis & a) const
+    virtual Item *do_optimize_type(Item_func_strcmp *i, Analysis &a) const
     {
         return do_optimize_type_self_and_args(i, a);
     }
 } ANON;
 
-
-
 extern const char str_if[] = "if";
 
-static class ANON : public CItemSubtypeFN<Item_func_if, str_if> {
+static class ANON : public CItemSubtypeFN<Item_func_if, str_if>
+{
     virtual RewritePlan *
     do_gather_type(const Item_func_if &i, Analysis &a) const
     {
@@ -1013,7 +1047,8 @@ static class ANON : public CItemSubtypeFN<Item_func_if, str_if> {
         UNIMPLEMENTED;
     }
 
-    virtual Item * do_optimize_type(Item_func_if *i, Analysis & a) const {
+    virtual Item *do_optimize_type(Item_func_if *i, Analysis &a) const
+    {
         return do_optimize_type_self_and_args(i, a);
     }
 } ANON;
@@ -1022,20 +1057,20 @@ static class ANON : public CItemSubtypeFN<Item_func_if, str_if> {
 // > Otherwise the value it produces must be rewritten in the same way
 // > that the value it compares was rewritten.
 extern const char str_nullif[] = "nullif";
-static class ANON : public CItemSubtypeFN<Item_func_nullif, str_nullif> {
+static class ANON : public CItemSubtypeFN<Item_func_nullif, str_nullif>
+{
     virtual RewritePlan *
     do_gather_type(const Item_func_nullif &i, Analysis &a) const
     {
         TEST_BadItemArgumentCount(i.type(), 2, i.argument_count());
         Item *const *const args = i.arguments();
-        std::vector<std::shared_ptr<RewritePlan> >
-            childr_rp({
-                std::shared_ptr<RewritePlan>(gather(*args[0], a)),
-                std::shared_ptr<RewritePlan>(gather(*args[1], a))});
+        std::vector<std::shared_ptr<RewritePlan>>
+            childr_rp({std::shared_ptr<RewritePlan>(gather(*args[0], a)),
+                       std::shared_ptr<RewritePlan>(gather(*args[1], a))});
 
         const EncSet child_es =
             EQ_EncSet.intersect(childr_rp[0]->es_out)
-                     .intersect(childr_rp[1]->es_out);
+                .intersect(childr_rp[1]->es_out);
 
         // HACK.
         const EncSet out_es = EncSet(child_es.chooseOne());
@@ -1047,7 +1082,7 @@ static class ANON : public CItemSubtypeFN<Item_func_nullif, str_nullif> {
                                      childr_rp, rsn);
     }
 
-    virtual Item * do_optimize_type(Item_func_nullif *i, Analysis & a)
+    virtual Item *do_optimize_type(Item_func_nullif *i, Analysis &a)
         const
     {
         return do_optimize_type_self_and_args(i, a);
@@ -1064,10 +1099,10 @@ static class ANON : public CItemSubtypeFN<Item_func_nullif, str_nullif> {
     }
 } ANON;
 
-
 extern const char str_coalesce[] = "coalesce";
 static class ANON : public CItemSubtypeFN<Item_func_coalesce,
-                                          str_coalesce> {
+                                          str_coalesce>
+{
     virtual RewritePlan *
     do_gather_type(const Item_func_coalesce &i, Analysis &a) const
     {
@@ -1079,18 +1114,19 @@ static class ANON : public CItemSubtypeFN<Item_func_coalesce,
         */
         UNIMPLEMENTED;
     }
-    virtual Item * do_optimize_type(Item_func_coalesce *i, Analysis & a) const
+    virtual Item *do_optimize_type(Item_func_coalesce *i, Analysis &a) const
     {
         return do_optimize_type_self_and_args(i, a);
     }
 } ANON;
 
 extern const char str_case[] = "case";
-static class ANON : public CItemSubtypeFN<Item_func_case, str_case> {
+static class ANON : public CItemSubtypeFN<Item_func_case, str_case>
+{
     virtual RewritePlan *
     do_gather_type(const Item_func_case &i, Analysis &a) const
     {
-	/*     Item **args = i->arguments();
+        /*     Item **args = i->arguments();
         int first_expr_num = i->*rob<Item_func_case, int,
                 &Item_func_case::first_expr_num>::ptr();
         int else_expr_num = i->*rob<Item_func_case, int,
@@ -1116,17 +1152,16 @@ static class ANON : public CItemSubtypeFN<Item_func_case, str_case> {
         UNIMPLEMENTED;
     }
 
-    virtual Item * do_optimize_type(Item_func_case *i, Analysis & a) const
+    virtual Item *do_optimize_type(Item_func_case *i, Analysis &a) const
     {
         return do_optimize_type_self_and_args(i, a);
     }
 } ANON;
 
-
-
 extern const char str_in_optimizer[] = "<in_optimizer>";
 static class ANON : public CItemSubtypeFN<Item_in_optimizer,
-                                          str_in_optimizer> {
+                                          str_in_optimizer>
+{
     virtual RewritePlan *
     do_gather_type(const Item_in_optimizer &i, Analysis &a) const
     {
@@ -1146,7 +1181,7 @@ static class ANON : public CItemSubtypeFN<Item_in_optimizer,
         */
     }
 
-    virtual Item * do_optimize_type(Item_in_optimizer *i, Analysis & a) const
+    virtual Item *do_optimize_type(Item_in_optimizer *i, Analysis &a) const
     {
         return do_optimize_type_self_and_args(i, a);
     }
@@ -1162,10 +1197,9 @@ static class ANON : public CItemSubtypeFN<Item_in_optimizer,
     }
 } ANON;
 
-
-
-template<const char *NAME>
-class CItemStrconv : public CItemSubtypeFN<Item_str_conv, NAME> {
+template <const char *NAME>
+class CItemStrconv : public CItemSubtypeFN<Item_str_conv, NAME>
+{
     virtual RewritePlan *
     do_gather_type(const Item_str_conv &i, Analysis &a) const
     {
@@ -1173,7 +1207,7 @@ class CItemStrconv : public CItemSubtypeFN<Item_str_conv, NAME> {
         return allPlainIterateGather(i, why, a);
     }
 
-    virtual Item * do_optimize_type(Item_str_conv *i, Analysis & a) const
+    virtual Item *do_optimize_type(Item_str_conv *i, Analysis &a) const
     {
         return do_optimize_type_self_and_args(i, a);
     }
@@ -1217,10 +1251,11 @@ static CItemStrconv<str_left> ANON;
 
 extern const char str_regexp[] = "regexp";
 static CItemStrconv<str_regexp> ANON;
- 
+
 extern const char str_date_add_interval[] = "date_add_interval";
 // Use encryption/rewriting.
-static class ANON : public CItemSubtypeFN<Item_date_add_interval, str_date_add_interval> {
+static class ANON : public CItemSubtypeFN<Item_date_add_interval, str_date_add_interval>
+{
     virtual RewritePlan *
     do_gather_type(const Item_date_add_interval &i, Analysis &a) const
     {
@@ -1231,8 +1266,8 @@ static class ANON : public CItemSubtypeFN<Item_date_add_interval, str_date_add_i
         return allPlainIterateGather(i, why, a);
     }
 
-    virtual Item * do_optimize_type(Item_date_add_interval *i,
-                                    Analysis & a) const
+    virtual Item *do_optimize_type(Item_date_add_interval *i,
+                                   Analysis &a) const
     {
         return do_optimize_type_self_and_args(i, a);
     }
@@ -1248,8 +1283,9 @@ static class ANON : public CItemSubtypeFN<Item_date_add_interval, str_date_add_i
 } ANON;
 
 // FIXME: Use encryption/rewriting.
-template<const char *NAME>
-class CItemDateNow : public CItemSubtypeFN<Item_func_now, NAME> {
+template <const char *NAME>
+class CItemDateNow : public CItemSubtypeFN<Item_func_now, NAME>
+{
     virtual RewritePlan *
     do_gather_type(const Item_func_now &i, Analysis &a) const
     {
@@ -1279,8 +1315,9 @@ static CItemDateNow<str_sysdate> ANON;
 
 // FIXME: What does Item_char_typecast do?
 // FIXME: Use encryption/rewriting.
-static class ANON: public CItemSubtypeFT<Item_char_typecast,
-                            Item_func::Functype::CHAR_TYPECAST_FUNC> {
+static class ANON : public CItemSubtypeFT<Item_char_typecast,
+                                          Item_func::Functype::CHAR_TYPECAST_FUNC>
+{
     virtual RewritePlan *
     do_gather_type(const Item_char_typecast &i, Analysis &a) const
     {
@@ -1299,7 +1336,8 @@ static class ANON: public CItemSubtypeFT<Item_char_typecast,
 } ANON;
 
 template <const char *NAME>
-class CItemFuncMiscPlain : public CItemSubtypeFN<Item_func, NAME> {
+class CItemFuncMiscPlain : public CItemSubtypeFN<Item_func, NAME>
+{
     virtual RewritePlan *
     do_gather_type(const Item_func &i, Analysis &a) const
     {

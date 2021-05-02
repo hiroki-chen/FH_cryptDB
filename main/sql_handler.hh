@@ -6,11 +6,11 @@
 
 #include <map>
 
-class SQLHandler {
+class SQLHandler
+{
 public:
-    SQLHandler() {;}
+    SQLHandler() { ; }
     virtual LEX *transformLex(Analysis &a, LEX *lex, const ProxyState &ps)
         const = 0;
-    virtual ~SQLHandler() {;}
+    virtual ~SQLHandler() { ; }
 };
-

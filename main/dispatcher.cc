@@ -1,7 +1,6 @@
 #include <main/dispatcher.hh>
 
-bool
-SQLDispatcher::canDo(LEX *const lex) const
+bool SQLDispatcher::canDo(LEX *const lex) const
 {
     return handlers.end() != handlers.find(extract(lex));
 }
@@ -23,8 +22,7 @@ SQLDispatcher::extract(LEX *const lex) const
 }
 
 // FIXME: Implement.
-bool
-AlterDispatcher::canDo(LEX *const lex) const
+bool AlterDispatcher::canDo(LEX *const lex) const
 {
     return true;
 }
@@ -33,9 +31,11 @@ std::vector<AlterSubHandler *>
 AlterDispatcher::dispatch(LEX *const lex) const
 {
     std::vector<AlterSubHandler *> out;
-    for (auto it = handlers.begin(); it != handlers.end(); it++) {
+    for (auto it = handlers.begin(); it != handlers.end(); it++)
+    {
         long long extract = lex->alter_info.flags & (*it).first;
-        if (extract) {
+        if (extract)
+        {
             auto it_handler = handlers.find(extract);
             assert(handlers.end() != it_handler && it_handler->second);
             out.push_back(it_handler->second.get());
@@ -44,4 +44,3 @@ AlterDispatcher::dispatch(LEX *const lex) const
 
     return out;
 }
-

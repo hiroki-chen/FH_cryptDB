@@ -24,7 +24,7 @@ bool isCommand(std::string str);
 
 //it is made to point to the first field after select and distinct if they
 // exist
-std::string getFieldsItSelect(std::list<std::string> & words, std::list<std::string>::iterator & it);
+std::string getFieldsItSelect(std::list<std::string> &words, std::list<std::string>::iterator &it);
 
 bool isNested(const std::string &query);
 
@@ -43,7 +43,7 @@ std::string getTable(std::string tablefield);
 std::string
 getTableSalt(std::string anonTableName);
 // a table salt
-bool isSalt(std::string id, bool & isTableSalt);
+bool isSalt(std::string id, bool &isTableSalt);
 //returns the anonymized name of the table with this salt
 std::string getTableOfSalt(std::string salt_name);
 
@@ -52,11 +52,11 @@ std::string getTableOfSalt(std::string salt_name);
 //should allow *
 //does not consider field aliases
 std::string fieldNameForResponse(std::string table, std::string field,
-                                 std::string origName, QueryMeta & qm,
+                                 std::string origName, QueryMeta &qm,
                                  bool isAgg = false);
 
 // fetches the next auto increment value for fullname and updates autoInc
-std::string nextAutoInc(std::map<std::string, unsigned int> & autoInc,
+std::string nextAutoInc(std::map<std::string, unsigned int> &autoInc,
                         std::string fullname);
 
 std::string getpRandomName();

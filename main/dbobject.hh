@@ -7,13 +7,14 @@
 #include <main/serializers.hh>
 
 // FIXME: Maybe should inherit from DBObject.
-class AbstractMetaKey {
+class AbstractMetaKey
+{
 public:
-    AbstractMetaKey() {;}
-    virtual ~AbstractMetaKey() {;}
+    AbstractMetaKey() { ; }
+    virtual ~AbstractMetaKey() { ; }
     virtual std::string getSerial() const = 0;
     template <typename ConcreteKey>
-        static ConcreteKey *factory(std::string serial)
+    static ConcreteKey *factory(std::string serial)
     {
         int dummy = 1;
         return new ConcreteKey(dummy, serial);
@@ -21,36 +22,37 @@ public:
 };
 
 template <typename KeyType>
-class MetaKey : public AbstractMetaKey {
+class MetaKey : public AbstractMetaKey
+{
     const KeyType key_data;
     const std::string serial;
 
 protected:
     // Build MetaKey from serialized MetaKey.
-    MetaKey(KeyType key_data, std::string serial) :
-        key_data(key_data), serial(serial) {}
+    MetaKey(KeyType key_data, std::string serial) : key_data(key_data), serial(serial) {}
 
 public:
     // Build MetaKey from 'actual' key value.
-    MetaKey(KeyType key_data) {;}
+    MetaKey(KeyType key_data) { ; }
     virtual ~MetaKey() = 0;
-    bool operator <(const MetaKey<KeyType> &rhs) const;
-    bool operator ==(const MetaKey<KeyType> &rhs) const;
+    bool operator<(const MetaKey<KeyType> &rhs) const;
+    bool operator==(const MetaKey<KeyType> &rhs) const;
 
-    KeyType getValue() const {return key_data;}
-    std::string getSerial() const {return serial;}
+    KeyType getValue() const { return key_data; }
+    std::string getSerial() const { return serial; }
 };
 
 template <typename KeyType>
-MetaKey<KeyType>::~MetaKey() {;}
+MetaKey<KeyType>::~MetaKey() { ; }
 
-class IdentityMetaKey : public MetaKey<std::string> {
+class IdentityMetaKey : public MetaKey<std::string>
+{
 public:
     IdentityMetaKey(std::string key_data)
         : MetaKey(key_data, serialize(key_data)) {}
     IdentityMetaKey(int dummy, std::string serial)
         : MetaKey(unserialize(serial), serial) {}
-    ~IdentityMetaKey() {;}
+    ~IdentityMetaKey() { ; }
 
 private:
     std::string serialize(std::string s)
@@ -64,13 +66,14 @@ private:
     }
 };
 
-class OnionMetaKey : public MetaKey<onion> {
+class OnionMetaKey : public MetaKey<onion>
+{
 public:
     OnionMetaKey(onion key_data)
         : MetaKey(key_data, serialize(key_data)) {}
     OnionMetaKey(int dummy, std::string serial)
         : MetaKey(unserialize(serial), serial) {}
-    ~OnionMetaKey() {;}
+    ~OnionMetaKey() { ; }
 
 private:
     std::string serialize(onion o)
@@ -84,13 +87,14 @@ private:
     }
 };
 
-class UIntMetaKey : public MetaKey<unsigned int> {
+class UIntMetaKey : public MetaKey<unsigned int>
+{
 public:
     UIntMetaKey(unsigned int key_data)
         : MetaKey(key_data, serialize(key_data)) {}
     UIntMetaKey(int dummy, std::string serial)
         : MetaKey(unserialize(serial), serial) {}
-    ~UIntMetaKey() {;}
+    ~UIntMetaKey() { ; }
 
 private:
     virtual std::string serialize(unsigned int i)
@@ -104,7 +108,8 @@ private:
     }
 };
 
-class DBObject {
+class DBObject
+{
     const unsigned int id;
 
 public:
@@ -114,8 +119,8 @@ public:
     DBObject() : id(0) {}
     // Unserializing old objects.
     explicit DBObject(unsigned int id) : id(id) {}
-    virtual ~DBObject() {;}
-    unsigned int getDatabaseID() const {return id;}
+    virtual ~DBObject() { ; }
+    unsigned int getDatabaseID() const { return id; }
     // FIXME: This should possibly be a part of DBMeta.
     // > Parent will definitely be DBMeta.
     // > Parent-Child semantics aren't really added until DBMeta.
@@ -137,44 +142,45 @@ class Connect;
  *  read SchemaInfo from database.
  *  > Logic is in SQL.
  */
-class DBMeta : public DBObject {
+class DBMeta : public DBObject
+{
 public:
     DBMeta() {}
     explicit DBMeta(unsigned int id) : DBObject(id) {}
-    virtual ~DBMeta() {;}
+    virtual ~DBMeta() { ; }
     // FIXME: Use rtti.
     virtual std::string typeName() const = 0;
     virtual std::vector<DBMeta *>
-        fetchChildren(const std::unique_ptr<Connect> &e_conn) = 0;
+    fetchChildren(const std::unique_ptr<Connect> &e_conn) = 0;
     // Stops processing on error.
     virtual bool
         applyToChildren(std::function<bool(const DBMeta &)>)
-        const = 0;
+            const = 0;
     virtual AbstractMetaKey const &getKey(const DBMeta &child)
         const = 0;
 
 protected:
-    std::vector<DBMeta*>
-        doFetchChildren(const std::unique_ptr<Connect> &e_conn,
-                        std::function<DBMeta*
-                            (const std::string &, const std::string &,
-                             const std::string &)>
-                            deserialHandler);
+    std::vector<DBMeta *>
+    doFetchChildren(const std::unique_ptr<Connect> &e_conn,
+                    std::function<DBMeta *(const std::string &, const std::string &,
+                                           const std::string &)>
+                        deserialHandler);
 };
 
-class LeafDBMeta : public DBMeta {
+class LeafDBMeta : public DBMeta
+{
 public:
     LeafDBMeta() {}
     LeafDBMeta(unsigned int id) : DBMeta(id) {}
 
     std::vector<DBMeta *>
-        fetchChildren(const std::unique_ptr<Connect> &e_conn)
+    fetchChildren(const std::unique_ptr<Connect> &e_conn)
     {
         return std::vector<DBMeta *>();
     }
 
     bool applyToChildren(std::function<bool(const DBMeta &)>
-        fn) const
+                             fn) const
     {
         return true;
     }
@@ -192,7 +198,8 @@ public:
 // > FIXME: The key in children is a pointer so this means our lookup is
 //   slow. Use std::reference_wrapper.
 template <typename ChildType, typename KeyType>
-class MappedDBMeta : public DBMeta {
+class MappedDBMeta : public DBMeta
+{
 public:
     MappedDBMeta() {}
     MappedDBMeta(unsigned int id) : DBMeta(id) {}
@@ -201,16 +208,15 @@ public:
                           std::unique_ptr<ChildType> meta);
     virtual bool childExists(const KeyType &key) const;
     virtual ChildType *
-        getChild(const KeyType &key) const;
+    getChild(const KeyType &key) const;
     KeyType const &getKey(const DBMeta &child) const;
     virtual std::vector<DBMeta *>
-        fetchChildren(const std::unique_ptr<Connect> &e_conn);
+    fetchChildren(const std::unique_ptr<Connect> &e_conn);
     bool applyToChildren(std::function<bool(const DBMeta &)>
-        fn) const;
+                             fn) const;
 
     // FIXME: Make protected.
     std::map<KeyType, std::unique_ptr<ChildType>> children;
 };
 
 #include <main/dbobject.tt>
-

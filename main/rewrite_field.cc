@@ -21,16 +21,13 @@
 #include <util/enum_text.hh>
 #include <parser/lex_util.hh>
 
-
-// gives names to classes and objects we don't care to know the name of 
-#define ANON                ANON_NAME(__anon_id_f_)
-
+// gives names to classes and objects we don't care to know the name of
+#define ANON ANON_NAME(__anon_id_f_)
 
 CItemTypesDir itemTypes = CItemTypesDir();
 CItemFuncDir funcTypes = CItemFuncDir();
 CItemFuncNameDir funcNames = CItemFuncNameDir();
 CItemSumFuncDir sumFuncTypes = CItemSumFuncDir();
-
 
 /*
  * Unclear whether this is the correct formulation for subqueries that
@@ -63,18 +60,17 @@ deductPlainTableName(const std::string &field_name,
     return deductPlainTableName(field_name, context->outer_context, a);
 }*/
 
-class ANON : public CItemSubtypeIT<Item_field, Item::Type::FIELD_ITEM> {
+class ANON : public CItemSubtypeIT<Item_field, Item::Type::FIELD_ITEM>
+{
     virtual RewritePlan *
     do_gather_type(const Item_field &i, Analysis &a) const
     {
-    	LOG(cdb_v) << "FIELD_ITEM do_gather " << i << std::endl;
+        LOG(cdb_v) << "FIELD_ITEM do_gather " << i << std::endl;
 
         const std::string fieldname = i.field_name;
         const std::string table =
-            i.table_name ? i.table_name :
-                            deductPlainTableName(i.field_name,
-                                                 i.context, a);
- 
+            i.table_name ? i.table_name : deductPlainTableName(i.field_name, i.context, a);
+
         FieldMeta &fm =
             a.getFieldMeta(a.getDatabaseName(), table, fieldname);
 
@@ -83,7 +79,6 @@ class ANON : public CItemSubtypeIT<Item_field, Item::Type::FIELD_ITEM> {
         const std::string why = "is a field";
         reason rsn(es, why, i);
         return new RewritePlan(es, rsn);
-
     }
 
     virtual Item *
@@ -95,9 +90,7 @@ class ANON : public CItemSubtypeIT<Item_field, Item::Type::FIELD_ITEM> {
 
         const std::string &db_name = a.getDatabaseName();
         const std::string plain_table_name =
-            i.table_name ? i.table_name :
-                            deductPlainTableName(i.field_name,
-                                                 i.context, a);
+            i.table_name ? i.table_name : deductPlainTableName(i.field_name, i.context, a);
         a.table_name_last_used = "";
         a.table_name_last_used = plain_table_name;
         const FieldMeta &fm =
@@ -110,7 +103,8 @@ class ANON : public CItemSubtypeIT<Item_field, Item::Type::FIELD_ITEM> {
                            constr.o);
         const SECLEVEL onion_level = a.getOnionLevel(om);
         assert(onion_level != SECLEVEL::INVALID);
-        if (constr.l < onion_level) {
+        if (constr.l < onion_level)
+        {
             //need adjustment, throw exception
             const TableMeta &tm =
                 a.getTableMeta(db_name, plain_table_name);
@@ -121,29 +115,30 @@ class ANON : public CItemSubtypeIT<Item_field, Item::Type::FIELD_ITEM> {
             a.getAnonTableName(db_name, plain_table_name);
         const std::string anon_field_name = om.getAnonOnionName();
 
-        	Item_field * const res =
-        	            make_item_field(i, anon_table_name, anon_field_name);
-        	Item_field * const plain_res =
-        				make_item_field(i, anon_table_name, fm.fname);
-        	// This information is only relevant if it comes from a
-        	// HAVING clause.
-        	// FIXME: Enforce this semantically.
-        	a.item_cache[&i] = std::make_pair(res, constr);
+        Item_field *const res =
+            make_item_field(i, anon_table_name, anon_field_name);
+        Item_field *const plain_res =
+            make_item_field(i, anon_table_name, fm.fname);
+        // This information is only relevant if it comes from a
+        // HAVING clause.
+        // FIXME: Enforce this semantically.
+        a.item_cache[&i] = std::make_pair(res, constr);
 
-        	// This rewrite may be inside of an ON DUPLICATE KEY UPDATE...
-        	// where there query is using the VALUES(...) function.
-        	if (isItem_insert_value(i)) {
-        		const Item_insert_value &insert_i =
-        	    static_cast<const Item_insert_value &>(i);
-        	    return make_item_insert_value(insert_i, res);
-        	}
+        // This rewrite may be inside of an ON DUPLICATE KEY UPDATE...
+        // where there query is using the VALUES(...) function.
+        if (isItem_insert_value(i))
+        {
+            const Item_insert_value &insert_i =
+                static_cast<const Item_insert_value &>(i);
+            return make_item_insert_value(insert_i, res);
+        }
 
-        	return needFrequencySmoothing(fm.fname) ||
-        			needEncryption(fm.fname)  ?
-        			res : plain_res;
-
+        return needFrequencySmoothing(fm.fname) ||
+                       needEncryption(fm.fname)
+                   ? res
+                   : plain_res;
     }
-/*
+    /*
     static OLK
     chooseProj(FieldMeta * fm)
     {
@@ -170,19 +165,20 @@ class ANON : public CItemSubtypeIT<Item_field, Item::Type::FIELD_ITEM> {
             a.getAnonTableName(a.getDatabaseName(), i.table_name);
 
         Item_field *new_field = NULL;
-        for (auto it : fm.orderedOnionMetas()) {
+        for (auto it : fm.orderedOnionMetas())
+        {
             const std::string anon_field_name =
                 it.second->getAnonOnionName();
             new_field =
                 make_item_field(i, anon_table_name, anon_field_name);
             l->push_back(new_field);
         }
-        if (fm.getHasSalt()) {
+        if (fm.getHasSalt())
+        {
             assert(new_field); // need an anonymized field as template to
                                // create salt item
             l->push_back(make_item_field(*new_field, anon_table_name,
-                                  fm.getSaltName()));
+                                         fm.getSaltName()));
         }
-
     }
 } ANON;

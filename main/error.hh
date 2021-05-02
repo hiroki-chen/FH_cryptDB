@@ -8,7 +8,8 @@
 class EncSet;
 class RewritePlan;
 
-class AbstractException {
+class AbstractException
+{
 public:
     AbstractException(const std::string &file_name,
                       unsigned int line_number)
@@ -16,8 +17,8 @@ public:
     virtual ~AbstractException() {}
 
     virtual std::string to_string() const = 0;
-    std::string getFileName() const {return file_name;}
-    unsigned int lineNumber() const {return line_number;}
+    std::string getFileName() const { return file_name; }
+    unsigned int lineNumber() const { return line_number; }
 
 private:
     const std::string file_name;
@@ -27,7 +28,8 @@ private:
 std::ostream &operator<<(std::ostream &out,
                          const AbstractException &abstract_error);
 
-class BadItemArgumentCount : public AbstractException {
+class BadItemArgumentCount : public AbstractException
+{
 public:
     BadItemArgumentCount(const std::string &file_name, int line_number,
                          unsigned int type, int expected, int actual)
@@ -46,7 +48,8 @@ private:
     const int actual;
 };
 
-class UnexpectedSecurityLevel : public AbstractException {
+class UnexpectedSecurityLevel : public AbstractException
+{
 public:
     UnexpectedSecurityLevel(const std::string &file_name, int line_number,
                             onion o, SECLEVEL expected, SECLEVEL actual)
@@ -63,13 +66,14 @@ private:
     const SECLEVEL actual;
 };
 
-class NoAvailableEncSet : public AbstractException {
+class NoAvailableEncSet : public AbstractException
+{
 public:
     NoAvailableEncSet(const std::string &file_name, int line_number,
                       unsigned int type, const EncSet &req_enc_set,
                       const std::string &why,
-                      const std::vector<std::shared_ptr<RewritePlan> >
-                        &childr_rp)
+                      const std::vector<std::shared_ptr<RewritePlan>>
+                          &childr_rp)
         : AbstractException(file_name, line_number), type(type),
           req_enc_set(req_enc_set), why(why), childr_rp(childr_rp) {}
     ~NoAvailableEncSet() {}
@@ -82,10 +86,11 @@ private:
     const unsigned int type;
     const EncSet req_enc_set;
     const std::string why;
-    const std::vector<std::shared_ptr<RewritePlan> > childr_rp;
+    const std::vector<std::shared_ptr<RewritePlan>> childr_rp;
 };
 
-class TextMessageError : public AbstractException {
+class TextMessageError : public AbstractException
+{
 public:
     TextMessageError(const std::string &file_name, int line_number,
                      const std::string &message)
@@ -100,7 +105,8 @@ private:
     const std::string message;
 };
 
-class IdentifierNotFound : public AbstractException {
+class IdentifierNotFound : public AbstractException
+{
 public:
     IdentifierNotFound(const std::string &file_name, int line_number,
                        const std::string &identifier_name)
@@ -116,7 +122,8 @@ private:
 
 // Do not derive this from AbstractException; their handling is too
 // divergent and we don't want to miss cases in catch graphs.
-class SynchronizationException {
+class SynchronizationException
+{
 public:
     SynchronizationException(const std::string &file_name,
                              unsigned long line_number,
@@ -132,4 +139,3 @@ private:
 
 std::ostream &operator<<(std::ostream &out,
                          const SynchronizationException &error);
-

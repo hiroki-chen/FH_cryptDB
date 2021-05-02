@@ -9,10 +9,11 @@
 #include <sql_lex.h>
 
 // Abstract base class for query handler.
-class DMLHandler : public SQLHandler {
+class DMLHandler : public SQLHandler
+{
 public:
     virtual LEX *transformLex(Analysis &a, LEX *lex,
-                               const ProxyState &ps) const;
+                              const ProxyState &ps) const;
 
 private:
     virtual void gather(Analysis &a, LEX *lex, const ProxyState &ps)
@@ -21,8 +22,8 @@ private:
         const = 0;
 
 protected:
-    DMLHandler() {;}
-    virtual ~DMLHandler() {;}
+    DMLHandler() { ; }
+    virtual ~DMLHandler() { ; }
 };
 
 std::string generateEquivalentSelectStatementForUpdate(const LEX *const lex);

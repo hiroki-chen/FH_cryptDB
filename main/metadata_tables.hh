@@ -5,12 +5,14 @@
 
 #include <main/Connect.hh>
 
-namespace MetaData {
+namespace MetaData
+{
     bool initialize(const std::unique_ptr<Connect> &conn,
                     const std::unique_ptr<Connect> &e_conn,
                     const std::string &prefix);
 
-    namespace Table {
+    namespace Table
+    {
         std::string metaObject();
         std::string bleedingMetaObject();
         std::string embeddedQueryCompletion();
@@ -18,21 +20,23 @@ namespace MetaData {
         std::string remoteQueryCompletion();
     };
 
-    namespace Proc {
+    namespace Proc
+    {
         std::string currentTransactionID();
         std::string homAdditionTransaction();
         std::string adjustOnion();
     };
 
-    namespace DB {
+    namespace DB
+    {
         std::string embeddedDB();
         std::string remoteDB();
     };
 
-    namespace Internal {
+    namespace Internal
+    {
         void initPrefix(const std::string &prefix);
         const std::string &getPrefix();
         const std::string &lowLevelPrefix(const char *const p);
     };
 };
-

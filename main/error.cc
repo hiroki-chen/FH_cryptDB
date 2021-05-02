@@ -15,7 +15,8 @@ std::ostream &operator<<(std::ostream &out,
 std::string AbstractException::to_string() const
 {
     return "FILE: " + file_name + "\n"
-           "LINE: " + std::to_string(line_number) + "\n";
+                                  "LINE: " +
+           std::to_string(line_number) + "\n";
 }
 
 // FIXME: Format the output.
@@ -35,7 +36,7 @@ std::string UnexpectedSecurityLevel::to_string() const
     return "Unexpected security level for onion\n" +
            AbstractException::to_string() +
            "ONION TYPE: " + TypeText<onion>::toText(o) + "\n" +
-           "EXPECTED LEVEL: " + TypeText<SECLEVEL>::toText(expected)+"\n" +
+           "EXPECTED LEVEL: " + TypeText<SECLEVEL>::toText(expected) + "\n" +
            "ACTUAL LEVEL: " + TypeText<SECLEVEL>::toText(actual) + "\n";
 }
 
@@ -44,17 +45,17 @@ std::string UnexpectedSecurityLevel::to_string() const
 std::string NoAvailableEncSet::to_string() const
 {
     std::stringstream s;
-    s <<
-        "Current crypto schemes do not support this query" << std::endl
-        << AbstractException::to_string()
-        // << "ITEM TYPE " + TypeText<>::toText();
-        << "ITEM TYPE: " << std::to_string(type) << std::endl
-        << "OPERATION: " << why << std::endl
-        << "REQUIRED ENCSET: " << req_enc_set << std::endl
-        << "***** CHILDREN REASONS *****" << std::endl;
-    for (auto it = childr_rp.begin(); it != childr_rp.end(); it++) {
+    s << "Current crypto schemes do not support this query" << std::endl
+      << AbstractException::to_string()
+      // << "ITEM TYPE " + TypeText<>::toText();
+      << "ITEM TYPE: " << std::to_string(type) << std::endl
+      << "OPERATION: " << why << std::endl
+      << "REQUIRED ENCSET: " << req_enc_set << std::endl
+      << "***** CHILDREN REASONS *****" << std::endl;
+    for (auto it = childr_rp.begin(); it != childr_rp.end(); it++)
+    {
         s << "[" << std::to_string(std::distance(childr_rp.begin(), it))
-                 << "] "
+          << "] "
           << (*it)->getReason() << std::endl;
     }
 
@@ -63,22 +64,19 @@ std::string NoAvailableEncSet::to_string() const
 
 std::string TextMessageError::to_string() const
 {
-    return "Error: " + message + "\n"
-           + AbstractException::to_string();
+    return "Error: " + message + "\n" + AbstractException::to_string();
 }
 
 std::string
 IdentifierNotFound::to_string() const
 {
-    return "Identifier not found: '" + this->identifier_name + "'\n"
-           + AbstractException::to_string();
+    return "Identifier not found: '" + this->identifier_name + "'\n" + AbstractException::to_string();
 }
 
 std::string
 SynchronizationException::to_string() const
 {
-    return "** Synchronization Failure **\n"
-           + error.to_string();
+    return "** Synchronization Failure **\n" + error.to_string();
 }
 
 std::ostream &operator<<(std::ostream &out,
@@ -87,4 +85,3 @@ std::ostream &operator<<(std::ostream &out,
     out << error.to_string();
     return out;
 }
-

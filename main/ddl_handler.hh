@@ -9,9 +9,10 @@
 #include <sql_lex.h>
 
 // Abstract base class for command handler.
-class DDLHandler : public SQLHandler {
+class DDLHandler : public SQLHandler
+{
 public:
-    virtual LEX *transformLex(Analysis &analysis, LEX *lex, 
+    virtual LEX *transformLex(Analysis &analysis, LEX *lex,
                               const ProxyState &ps) const;
 
 private:
@@ -19,9 +20,8 @@ private:
                                   const ProxyState &ps) const = 0;
 
 protected:
-    DDLHandler() {;}
-    virtual ~DDLHandler() {;}
+    DDLHandler() { ; }
+    virtual ~DDLHandler() { ; }
 };
 
 SQLDispatcher *buildDDLDispatcher();
-

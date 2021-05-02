@@ -165,6 +165,13 @@ getPos(const Item &i, Analysis &a);
 salt_type
 padIV(const std::string &field_name, const salt_type &IV);
 
+UpdateOPE *
+generateUpdateOPE(const double &plaintext,
+                  const std::string &ciphertext,
+                  const OnionMeta &om,
+                  const std::string &table_name,
+                  std::map<double, unsigned int> &local_table);
+
 Item *
 encrypt_item_layers(const Item &i, onion o, const OnionMeta &om,
                     Analysis &a, uint64_t IV = 0, const std::string &field_name = "");

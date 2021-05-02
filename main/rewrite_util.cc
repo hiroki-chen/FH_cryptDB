@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <memory>
 #include <random>
 
@@ -837,6 +838,52 @@ padIV(const std::string &field_name, const salt_type &IV)
     return std::stoul(str);
 }
 
+UpdateOPE *
+generateUpdateOPE(const double &plaintext,
+                  const std::string &ciphertext,
+                  const OnionMeta &om,
+                  const std::string &table_name,
+                  std::map<double, unsigned int> &local_table)
+{
+    auto lambda = [&](const std::pair<double, unsigned int> &item) {
+        return item.first == plaintext;
+    };
+
+    auto accu = [](const unsigned int &lhs, const std::pair<double, unsigned int> &rhs) {
+        return lhs + rhs.second;
+    };
+
+    /**
+	 * There are two case:
+	 * 		> No such plaintext (special);
+	 * 		> It contains a plaintext.
+	 */
+
+    auto iter = std::find_if(local_table.begin(), local_table.end(), lambda);
+
+    // case 1: we should insert a plaintext into the table.
+    if (local_table.end() == iter)
+    {
+        local_table[plaintext] = 1;
+
+        iter = std::find_if(local_table.begin(), local_table.end(), lambda);
+    }
+
+    unsigned int distance = std::distance(local_table.begin(), iter);
+    const unsigned int total = std::accumulate(local_table.begin(), std::next(local_table.begin(), distance - 1), 0, accu);
+
+    /**
+	 * Generate a random position.
+	 */
+    std::uniform_int_distribution<int> dist(total + 1, total + 1 + iter->second);
+    std::random_device rd;
+    std::mt19937 engine(rd());
+    const unsigned int pos = dist(engine);
+    const std::string ope_column_name = om.getAnonOnionName();
+
+    return new UpdateOPE(pos, ciphertext, table_name, ope_column_name + "_encoding", ope_column_name);
+}
+
 //TODO: which encrypt/decrypt should handle null?
 
 // We cannot modify this encrypt function bacause it is no use to append a single item with multiple predicates.
@@ -868,12 +915,18 @@ encrypt_item_layers(const Item &i, onion o, const OnionMeta &om,
             // const std::string field_name = fm.fname;
             // std::cout << db_name << table_name << field_name << std::endl;
             // std::cout << RiboldMYSQL::val_real(i) << std::endl;
-            salt_type new_iv = a.local_table[VariableLocator(db_name, table_name, field_name)][RiboldMYSQL::val_real(i)];
+            std::map<double, unsigned int> &lt = a.local_table[VariableLocator(db_name, table_name, field_name)];
+            salt_type new_iv = lt[RiboldMYSQL::val_real(i)];
 
             std::cout << "encrypting for OPE item whose name is " << i.name << std::endl;
             new_enc = (*it)->encrypt(*enc, padIV(field_name, new_iv));
             // Then we should issue a call to pro_insert.
             // TODO: insert ope command into updateOPEs.
+
+            UpdateOPE *ope = generateUpdateOPE((double)RiboldMYSQL::val_real(*enc),
+                                               (std::string)RiboldMYSQL::val_str(*new_enc, nullptr),
+                                               om, table_name, lt);
+            a.updateOPEs.push_back(std::unique_ptr<UpdateOPE>(ope));
         }
         else
         {

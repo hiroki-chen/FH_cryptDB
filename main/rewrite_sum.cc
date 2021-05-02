@@ -23,8 +23,8 @@
 #include <util/enum_text.hh>
 #include <parser/lex_util.hh>
 
-// gives names to classes and objects we don't care to know the name of 
-#define ANON                ANON_NAME(__anon_id_sum_)
+// gives names to classes and objects we don't care to know the name of
+#define ANON ANON_NAME(__anon_id_sum_)
 
 // rewrites the arguments of aggregators
 // no_args specifies a certain number of arguments that I must have
@@ -35,38 +35,44 @@ rewrite_agg_args(const Item_sum &oldi, const OLK &constr,
                  int no_args = -1)
 {
 
-    if (no_args >= 0) {
+    if (no_args >= 0)
+    {
         TEST_BadItemArgumentCount(oldi.type(), no_args,
                                   RiboldMYSQL::get_arg_count(oldi));
-    } else {
+    }
+    else
+    {
         no_args = RiboldMYSQL::get_arg_count(oldi);
     }
 
-
     std::list<Item *> res = std::list<Item *>();
-    for (int j = 0; j < no_args; j++) {
+    for (int j = 0; j < no_args; j++)
+    {
         const Item *const child_item = RiboldMYSQL::get_arg(oldi, j);
         std::string identifier = child_item->name;
         identifier = identifier.substr(0, 5);
         std::string nenc = "nenc_";
 
-        if (identifier.compare(nenc) == 0) {
-        	Item* const new_child_item = (Item* const)child_item;
-        	res.push_back(new_child_item);
-        } else {
-			Item *const out_child_item =
-				itemTypes.do_rewrite(*child_item, rp.olk,
-									 *rp.childr_rp[j].get(), a);
-			res.push_back(out_child_item);
+        if (identifier.compare(nenc) == 0)
+        {
+            Item *const new_child_item = (Item *const)child_item;
+            res.push_back(new_child_item);
+        }
+        else
+        {
+            Item *const out_child_item =
+                itemTypes.do_rewrite(*child_item, rp.olk,
+                                     *rp.childr_rp[j].get(), a);
+            res.push_back(out_child_item);
         }
     }
 
     return res;
 }
 
-
-template<Item_sum::Sumfunctype SFT>
-class CItemCount : public CItemSubtypeST<Item_sum_count, SFT> {
+template <Item_sum::Sumfunctype SFT>
+class CItemCount : public CItemSubtypeST<Item_sum_count, SFT>
+{
     virtual RewritePlan *
     do_gather_type(const Item_sum_count &i, Analysis &a) const
     {
@@ -75,13 +81,14 @@ class CItemCount : public CItemSubtypeST<Item_sum_count, SFT> {
         TEST_BadItemArgumentCount(i.type(), 1, arg_count);
         const Item *const child = RiboldMYSQL::get_arg(i, 0);
 
-        std::vector<std::shared_ptr<RewritePlan> >
+        std::vector<std::shared_ptr<RewritePlan>>
             childr_rp({std::shared_ptr<RewritePlan>(gather(*child, a))});
         const EncSet needed = EQ_EncSet;
         const EncSet solution = childr_rp[0]->es_out.intersect(needed);
 
         std::string why = "count";
-        if (i.has_with_distinct()) {
+        if (i.has_with_distinct())
+        {
             why += " distinct";
             TEST_NoAvailableEncSet(solution, i.type(), needed, why,
                                    childr_rp);
@@ -111,10 +118,9 @@ class CItemCount : public CItemSubtypeST<Item_sum_count, SFT> {
 static CItemCount<Item_sum::Sumfunctype::COUNT_FUNC> ANON;
 static CItemCount<Item_sum::Sumfunctype::COUNT_DISTINCT_FUNC> ANON;
 
-
-
-template<Item_sum::Sumfunctype SFT, class IT>
-class CItemChooseOrder : public CItemSubtypeST<Item_sum_hybrid, SFT> {
+template <Item_sum::Sumfunctype SFT, class IT>
+class CItemChooseOrder : public CItemSubtypeST<Item_sum_hybrid, SFT>
+{
     virtual RewritePlan *
     do_gather_type(const Item_sum_hybrid &i, Analysis &a) const
     {
@@ -122,7 +128,7 @@ class CItemChooseOrder : public CItemSubtypeST<Item_sum_hybrid, SFT> {
         TEST_BadItemArgumentCount(i.type(), 1, arg_count);
         const Item *const child = RiboldMYSQL::get_arg(i, 0);
 
-        std::vector<std::shared_ptr<RewritePlan> >
+        std::vector<std::shared_ptr<RewritePlan>>
             childr_rp({std::shared_ptr<RewritePlan>(gather(*child, a))});
 
         // TODO: judge if there is any fh columns... This encset definitely doesn't work.
@@ -155,8 +161,9 @@ class CItemChooseOrder : public CItemSubtypeST<Item_sum_hybrid, SFT> {
 static CItemChooseOrder<Item_sum::Sumfunctype::MIN_FUNC, Item_sum_min> ANON;
 static CItemChooseOrder<Item_sum::Sumfunctype::MAX_FUNC, Item_sum_max> ANON;
 
-template<Item_sum::Sumfunctype SFT>
-class CItemSum : public CItemSubtypeST<Item_sum_sum, SFT> {
+template <Item_sum::Sumfunctype SFT>
+class CItemSum : public CItemSubtypeST<Item_sum_sum, SFT>
+{
     virtual RewritePlan *
     do_gather_type(const Item_sum_sum &i, Analysis &a) const
     {
@@ -166,11 +173,12 @@ class CItemSum : public CItemSubtypeST<Item_sum_sum, SFT> {
         TEST_BadItemArgumentCount(i.type(), 1, arg_count);
         const Item *const child_item = RiboldMYSQL::get_arg(i, 0);
 
-        std::vector<std::shared_ptr<RewritePlan> >
+        std::vector<std::shared_ptr<RewritePlan>>
             childr_rp({std::shared_ptr<RewritePlan>(gather(*child_item,
                                                            a))});
 
-        if (i.has_with_distinct()) {
+        if (i.has_with_distinct())
+        {
             UNIMPLEMENTED;
         }
 
@@ -188,9 +196,10 @@ class CItemSum : public CItemSubtypeST<Item_sum_sum, SFT> {
         const OLK olk = solution.chooseOne();
         const EncSet return_es = EncSet(olk);
 
-        if (identifier.compare(nenc) == 0) {
-        	const reason rsn(PLAIN_EncSet, why, i);
-        	return new RewritePlanOneOLK(PLAIN_EncSet, olk, childr_rp, rsn);
+        if (identifier.compare(nenc) == 0)
+        {
+            const reason rsn(PLAIN_EncSet, why, i);
+            return new RewritePlanOneOLK(PLAIN_EncSet, olk, childr_rp, rsn);
         }
 
         const reason rsn(return_es, why, i);
@@ -209,22 +218,25 @@ class CItemSum : public CItemSubtypeST<Item_sum_sum, SFT> {
                              static_cast<const RewritePlanOneOLK &>(rp),
                              a, 1);
 
-            if (oAGG == constr.o) {
-                OnionMeta *const om = constr.key->getOnionMeta(oAGG);
-                assert(om);
-                EncLayer const &el = a.getBackEncLayer(*om);
-                TEST_UnexpectedSecurityLevel(oAGG, SECLEVEL::HOM,
-                                             el.level());
-                return static_cast<const HOM &>(el).sumUDA(args.front());
-            } else {
-                TEST_UnexpectedSecurityLevel(constr.o, SECLEVEL::PLAINVAL,
-                                             constr.l);
-
-                Item *const new_arg =
-                    RiboldMYSQL::clone_item(*RiboldMYSQL::get_arg(i, 0));
-                return new Item_sum_sum(new_arg, i.has_with_distinct());
-            }
+        if (oAGG == constr.o)
+        {
+            OnionMeta *const om = constr.key->getOnionMeta(oAGG);
+            assert(om);
+            EncLayer const &el = a.getBackEncLayer(*om);
+            TEST_UnexpectedSecurityLevel(oAGG, SECLEVEL::HOM,
+                                         el.level());
+            return static_cast<const HOM &>(el).sumUDA(args.front());
         }
+        else
+        {
+            TEST_UnexpectedSecurityLevel(constr.o, SECLEVEL::PLAINVAL,
+                                         constr.l);
+
+            Item *const new_arg =
+                RiboldMYSQL::clone_item(*RiboldMYSQL::get_arg(i, 0));
+            return new Item_sum_sum(new_arg, i.has_with_distinct());
+        }
+    }
 };
 
 //TODO: field OPE should not be blob for text either
@@ -234,7 +246,8 @@ static CItemSum<Item_sum::Sumfunctype::SUM_DISTINCT_FUNC> ANON;
 static CItemSum<Item_sum::Sumfunctype::AVG_FUNC> ANON;
 static CItemSum<Item_sum::Sumfunctype::AVG_DISTINCT_FUNC> ANON;
 
-static class ANON : public CItemSubtypeST<Item_sum_bit, Item_sum::Sumfunctype::SUM_BIT_FUNC> {
+static class ANON : public CItemSubtypeST<Item_sum_bit, Item_sum::Sumfunctype::SUM_BIT_FUNC>
+{
     virtual RewritePlan *
     do_gather_type(const Item_sum_bit &i, Analysis &a) const
     {
@@ -246,7 +259,8 @@ static class ANON : public CItemSubtypeST<Item_sum_bit, Item_sum::Sumfunctype::S
     }
 } ANON;
 
-static class ANON : public CItemSubtypeST<Item_func_group_concat, Item_sum::Sumfunctype::GROUP_CONCAT_FUNC> {
+static class ANON : public CItemSubtypeST<Item_func_group_concat, Item_sum::Sumfunctype::GROUP_CONCAT_FUNC>
+{
     virtual RewritePlan *
     do_gather_type(const Item_func_group_concat &i, Analysis &a) const
     {
@@ -266,11 +280,12 @@ static class ANON : public CItemSubtypeST<Item_func_group_concat, Item_sum::Sumf
     // TODO(stephentu): figure out how to rob the arg fields for optimization
 } ANON;
 
-static class ANON : public CItemSubtypeIT<Item_ref, Item::Type::REF_ITEM> {
+static class ANON : public CItemSubtypeIT<Item_ref, Item::Type::REF_ITEM>
+{
     virtual RewritePlan *
     do_gather_type(const Item_ref &i, Analysis &a) const
     {
-        std::vector<std::shared_ptr<RewritePlan> >
+        std::vector<std::shared_ptr<RewritePlan>>
             childr_rp({std::shared_ptr<RewritePlan>(gather(**i.ref, a))});
 
         const EncSet out_es = EncSet(childr_rp[0]->es_out);
@@ -303,7 +318,8 @@ static class ANON : public CItemSubtypeIT<Item_ref, Item::Type::REF_ITEM> {
     }
 } ANON;
 
-static class ANON : public CItemSubtypeIT<Item_null, Item::Type::NULL_ITEM> {
+static class ANON : public CItemSubtypeIT<Item_null, Item::Type::NULL_ITEM>
+{
     virtual RewritePlan *
     do_gather_type(const Item_null &i, Analysis &a) const
     {
@@ -323,13 +339,14 @@ static class ANON : public CItemSubtypeIT<Item_null, Item::Type::NULL_ITEM> {
     do_rewrite_insert_type(const Item_null &i, const FieldMeta &fm,
                            Analysis &a, std::vector<Item *> *l) const
     {
-        for (uint j = 0; j < fm.children.size(); ++j) {
+        for (uint j = 0; j < fm.children.size(); ++j)
+        {
             l->push_back(RiboldMYSQL::clone_item(i));
         }
-        if (fm.getHasSalt()) {
+        if (fm.getHasSalt())
+        {
             const ulonglong salt = randomValue();
             l->push_back(new Item_int(static_cast<ulonglong>(salt)));
         }
     }
 } ANON;
-

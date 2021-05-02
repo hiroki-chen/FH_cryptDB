@@ -73,11 +73,12 @@ MetaData::DB::remoteDB()
     return name;
 }
 
-bool static
-hasWhitespace(const std::string &s)
+bool static hasWhitespace(const std::string &s)
 {
-    for (auto it : s) {
-        if (isspace(it)) {
+    for (auto it : s)
+    {
+        if (isspace(it))
+        {
             return true;
         }
     }
@@ -85,19 +86,20 @@ hasWhitespace(const std::string &s)
     return false;
 }
 
-bool
-MetaData::initialize(const std::unique_ptr<Connect> &conn,
-                     const std::unique_ptr<Connect> &e_conn,
-                     const std::string &prefix)
+bool MetaData::initialize(const std::unique_ptr<Connect> &conn,
+                          const std::unique_ptr<Connect> &e_conn,
+                          const std::string &prefix)
 {
     // HACK: prevents multiple initialization
     static bool initialized = false;
-    if (initialized) {
+    if (initialized)
+    {
         return false;
     }
 
     // Prefix handling must be done first.
-    if (hasWhitespace(prefix)) {
+    if (hasWhitespace(prefix))
+    {
         return false;
     }
     MetaData::Internal::initPrefix(prefix);
@@ -130,7 +132,7 @@ MetaData::initialize(const std::unique_ptr<Connect> &conn,
         "   (begin BOOLEAN NOT NULL,"
         "    complete BOOLEAN NOT NULL,"
         "    original_query VARCHAR(500) NOT NULL,"
-        "    default_db VARCHAR(500),"      // default database is NULLable
+        "    default_db VARCHAR(500)," // default database is NULLable
         "    aborted BOOLEAN NOT NULL,"
         "    type VARCHAR(100) NOT NULL,"
         "    id SERIAL PRIMARY KEY)"
@@ -164,8 +166,7 @@ MetaData::initialize(const std::unique_ptr<Connect> &conn,
     return true;
 }
 
-void
-MetaData::Internal::initPrefix(const std::string &s)
+void MetaData::Internal::initPrefix(const std::string &s)
 {
     lowLevelPrefix(s.c_str());
 }
@@ -182,4 +183,3 @@ MetaData::Internal::lowLevelPrefix(const char *const p)
     static const std::string prefix = (assert(p), p);
     return prefix;
 }
-

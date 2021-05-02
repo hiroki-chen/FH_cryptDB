@@ -4,7 +4,8 @@
 #include <parser/lex_util.hh>
 #include <util/enum_text.hh>
 
-class AddColumnSubHandler : public AlterSubHandler {
+class AddColumnSubHandler : public AlterSubHandler
+{
     virtual LEX *rewriteAndUpdate(Analysis &a, LEX *lex,
                                   const ProxyState &ps,
                                   const Preamble &preamble) const
@@ -16,18 +17,18 @@ class AddColumnSubHandler : public AlterSubHandler {
             List_iterator<Create_field>(lex->alter_info.create_list);
         lex->alter_info.create_list =
             accumList<Create_field>(add_it,
-                [&a, &ps, &tm] (List<Create_field> out_list,
-                                Create_field *cf)
-            {
-                    return createAndRewriteField(a, ps, cf, &tm,
-                                                 false, out_list);
-            });
+                                    [&a, &ps, &tm](List<Create_field> out_list,
+                                                   Create_field *cf) {
+                                        return createAndRewriteField(a, ps, cf, &tm,
+                                                                     false, out_list);
+                                    });
 
         return lex;
     }
 };
 
-class DropColumnSubHandler : public AlterSubHandler {
+class DropColumnSubHandler : public AlterSubHandler
+{
     virtual LEX *rewriteAndUpdate(Analysis &a, LEX *lex,
                                   const ProxyState &ps,
                                   const Preamble &preamble) const
@@ -37,29 +38,27 @@ class DropColumnSubHandler : public AlterSubHandler {
             List_iterator<Alter_drop>(lex->alter_info.drop_list);
         List<Alter_drop> col_drop_list =
             filterList<Alter_drop>(drop_it,
-                [](Alter_drop *const adrop)
-        {
-            return Alter_drop::COLUMN == adrop->type;
-        });
+                                   [](Alter_drop *const adrop) {
+                                       return Alter_drop::COLUMN == adrop->type;
+                                   });
 
         // Rewrite and Remove.
         drop_it = List_iterator<Alter_drop>(col_drop_list);
         lex->alter_info.drop_list =
             accumList<Alter_drop>(drop_it,
-                [preamble, &a, this] (List<Alter_drop> out_list,
-                                            Alter_drop *adrop)
-        {
-            FieldMeta const &fm =
-                a.getFieldMeta(preamble.dbname, preamble.table,
-                               adrop->name);
-            TableMeta const &tm =
-                a.getTableMeta(preamble.dbname, preamble.table);
-            List<Alter_drop> lst = this->rewrite(fm, adrop);
-            out_list.concat(&lst);
-            a.deltas.push_back(std::unique_ptr<Delta>(
-                                            new DeleteDelta(fm, tm)));
-            return out_list; /* lambda */
-        });
+                                  [preamble, &a, this](List<Alter_drop> out_list,
+                                                       Alter_drop *adrop) {
+                                      FieldMeta const &fm =
+                                          a.getFieldMeta(preamble.dbname, preamble.table,
+                                                         adrop->name);
+                                      TableMeta const &tm =
+                                          a.getTableMeta(preamble.dbname, preamble.table);
+                                      List<Alter_drop> lst = this->rewrite(fm, adrop);
+                                      out_list.concat(&lst);
+                                      a.deltas.push_back(std::unique_ptr<Delta>(
+                                          new DeleteDelta(fm, tm)));
+                                      return out_list; /* lambda */
+                                  });
 
         return lex;
     }
@@ -71,8 +70,9 @@ class DropColumnSubHandler : public AlterSubHandler {
 
         // Rewrite each onion column.
         for (auto om_it = fm.children.begin(); om_it != fm.children.end();
-             om_it++) {
-            Alter_drop * const new_adrop = adrop->clone(thd->mem_root);
+             om_it++)
+        {
+            Alter_drop *const new_adrop = adrop->clone(thd->mem_root);
             OnionMeta *const om = (*om_it).second.get();
             new_adrop->name =
                 thd->strdup(om->getAnonOnionName().c_str());
@@ -80,8 +80,9 @@ class DropColumnSubHandler : public AlterSubHandler {
         }
 
         // Rewrite the salt column.
-        if (fm.getHasSalt()) {
-            Alter_drop * const new_adrop = adrop->clone(thd->mem_root);
+        if (fm.getHasSalt())
+        {
+            Alter_drop *const new_adrop = adrop->clone(thd->mem_root);
             new_adrop->name =
                 thd->strdup(fm.getSaltName().c_str());
             out_list.push_back(new_adrop);
@@ -91,7 +92,8 @@ class DropColumnSubHandler : public AlterSubHandler {
     }
 };
 
-class ChangeColumnSubHandler : public AlterSubHandler {
+class ChangeColumnSubHandler : public AlterSubHandler
+{
     virtual LEX *rewriteAndUpdate(Analysis &a, LEX *lex,
                                   const ProxyState &ps,
                                   const Preamble &preamble) const
@@ -100,7 +102,8 @@ class ChangeColumnSubHandler : public AlterSubHandler {
     }
 };
 
-class ForeignKeySubHandler : public AlterSubHandler {
+class ForeignKeySubHandler : public AlterSubHandler
+{
     virtual LEX *rewriteAndUpdate(Analysis &a, LEX *lex,
                                   const ProxyState &ps,
                                   const Preamble &preamble) const
@@ -109,7 +112,8 @@ class ForeignKeySubHandler : public AlterSubHandler {
     }
 };
 
-class AddIndexSubHandler : public AlterSubHandler {
+class AddIndexSubHandler : public AlterSubHandler
+{
     virtual LEX *rewriteAndUpdate(Analysis &a, LEX *lex,
                                   const ProxyState &ps,
                                   const Preamble &preamble) const
@@ -122,21 +126,22 @@ class AddIndexSubHandler : public AlterSubHandler {
             List_iterator<Key>(lex->alter_info.key_list);
         lex->alter_info.key_list =
             accumList<Key>(key_it,
-                [&tm, &a] (List<Key> out_list, Key *const key) {
-                    // -----------------------------
-                    //         Rewrite INDEX
-                    // -----------------------------
-                    auto new_keys = rewrite_key(tm, key, a);
-                    out_list.concat(vectorToListWithTHD(new_keys));
+                           [&tm, &a](List<Key> out_list, Key *const key) {
+                               // -----------------------------
+                               //         Rewrite INDEX
+                               // -----------------------------
+                               auto new_keys = rewrite_key(tm, key, a);
+                               out_list.concat(vectorToListWithTHD(new_keys));
 
-                    return out_list;    /* lambda */
-            });
+                               return out_list; /* lambda */
+                           });
 
         return lex;
     }
 };
 
-class DropIndexSubHandler : public AlterSubHandler {
+class DropIndexSubHandler : public AlterSubHandler
+{
     virtual LEX *rewriteAndUpdate(Analysis &a, LEX *lex,
                                   const ProxyState &ps,
                                   const Preamble &preamble) const
@@ -149,24 +154,21 @@ class DropIndexSubHandler : public AlterSubHandler {
             List_iterator<Alter_drop>(lex->alter_info.drop_list);
         List<Alter_drop> key_drop_list =
             filterList<Alter_drop>(drop_it,
-                [](Alter_drop *const adrop)
-                {
-                    return Alter_drop::KEY == adrop->type;
-                });
+                                   [](Alter_drop *const adrop) {
+                                       return Alter_drop::KEY == adrop->type;
+                                   });
 
         // Rewrite.
         drop_it =
             List_iterator<Alter_drop>(key_drop_list);
         lex->alter_info.drop_list =
             accumList<Alter_drop>(drop_it,
-                [preamble, &tm, &a, this]
-                    (List<Alter_drop> out_list, Alter_drop *adrop)
-                {
-                        List<Alter_drop> lst =
-                            this->rewrite(a, adrop, preamble.table);
-                        out_list.concat(&lst); 
-                        return out_list;
-                });
+                                  [preamble, &tm, &a, this](List<Alter_drop> out_list, Alter_drop *adrop) {
+                                      List<Alter_drop> lst =
+                                          this->rewrite(a, adrop, preamble.table);
+                                      out_list.concat(&lst);
+                                      return out_list;
+                                  });
 
         return lex;
     }
@@ -177,10 +179,12 @@ class DropIndexSubHandler : public AlterSubHandler {
         // Rewrite the Alter_drop data structure.
         List<Alter_drop> out_list;
         const std::vector<onion> key_onions = getOnionIndexTypes();
-        for (auto onion_it : key_onions) {
+        for (auto onion_it : key_onions)
+        {
             const onion o = onion_it;
             // HACK.
-            if (oPLAIN == o) {
+            if (oPLAIN == o)
+            {
                 continue;
             }
             Alter_drop *const new_adrop =
@@ -192,8 +196,10 @@ class DropIndexSubHandler : public AlterSubHandler {
             out_list.push_back(new_adrop);
         }
 
-        if (equalsIgnoreCase(adrop->name, "PRIMARY")) {
-            if (out_list.elements > 0) {
+        if (equalsIgnoreCase(adrop->name, "PRIMARY"))
+        {
+            if (out_list.elements > 0)
+            {
                 List<Alter_drop> abridged_out_list;
                 Alter_drop *const new_adrop =
                     adrop->clone(current_thd->mem_root);
@@ -207,7 +213,8 @@ class DropIndexSubHandler : public AlterSubHandler {
     }
 };
 
-class DisableOrEnableKeys : public AlterSubHandler {
+class DisableOrEnableKeys : public AlterSubHandler
+{
     virtual LEX *rewriteAndUpdate(Analysis &a, LEX *const lex,
                                   const ProxyState &ps,
                                   const Preamble &preamble) const
@@ -226,7 +233,8 @@ LEX *AlterSubHandler::transformLex(Analysis &a, LEX *lex,
     return this->rewriteAndUpdate(a, lex, ps, preamble);
 }
 
-AlterDispatcher *buildAlterSubDispatcher() {
+AlterDispatcher *buildAlterSubDispatcher()
+{
     AlterDispatcher *dispatcher = new AlterDispatcher();
     AlterSubHandler *h;
 
@@ -253,4 +261,3 @@ AlterDispatcher *buildAlterSubDispatcher() {
 
     return dispatcher;
 }
-
