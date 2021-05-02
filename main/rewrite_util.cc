@@ -242,7 +242,7 @@ get_create_field(const Analysis &a, Create_field *const f,
 // as such is handled during INSERTion.
 std::vector<Create_field *>
 rewrite_create_field(const FieldMeta *const fm,
-                     Create_field *const f, const Analysis &a,
+                     Create_field *const f, Analysis &a,
                      bool needEnc, std::vector<rapidjson::Document> &documents)
 {
     LOG(cdb_v) << "in rewrite create field for " << *f;
@@ -299,6 +299,10 @@ rewrite_create_field(const FieldMeta *const fm,
                     assert(writeDomToFile(*it, dir));
                     it++;
                 }
+                else if (SECLEVEL::FHOPE == item.get()->level())
+                {
+                    a.encoding_fields.push_back(std::unique_ptr<Create_field>(item.get()->buildCreateFieldEncoding(new_cf)));
+                }
             }
 
             output_cfields.push_back(new_cf);
@@ -323,6 +327,17 @@ rewrite_create_field(const FieldMeta *const fm,
 
         // Restore the default to the original Create_field parameter.
         f->def = save_def;
+    }
+
+    /**
+     * Traverse the encoding fields and append them to the end of the list.
+     */
+
+    for (auto &item : a.encoding_fields)
+    {
+        //Create_field * const cf = item.get();
+
+        output_cfields.push_back(item.get());
     }
 
     return output_cfields;
@@ -416,6 +431,11 @@ getOriginalKeyName(Key *const key)
                           "Non-Primary keys can not have blank name!");
 
     return out_name;
+}
+
+bool loadLocalTable(const std::string &path, rapidjson::Document &doc)
+{
+    return true;
 }
 
 /**
@@ -552,6 +572,11 @@ bool loadAllSalsFromFile(const std::string &db_name, const TABLE_LIST *const tab
     }
 
     return true;
+}
+
+unsigned int
+getPos(const Item &i, Analysis &a)
+{
 }
 
 bool issueSelectForDeleteOrUpdate(Analysis &a, const LEX *const lex, const ProxyState &ps, bool update)
@@ -794,14 +819,34 @@ createAndRewriteField(Analysis &a, const ProxyState &ps,
     return rewritten_cfield_list;
 }
 
+salt_type
+padIV(const std::string &field_name, const salt_type &IV)
+{
+    const unsigned int length = extractSaltLengthFromField(field_name);
+
+    // We are sure that this IV is an integer.
+    std::string str = std::to_string(IV);
+    const unsigned int sl = str.size();
+
+    assert(str.size() <= length);
+    for (unsigned int i = 0; i < length - sl; i++)
+    {
+        str.append("0");
+    }
+
+    return std::stoul(str);
+}
+
 //TODO: which encrypt/decrypt should handle null?
 
 // We cannot modify this encrypt function bacause it is no use to append a single item with multiple predicates.
 // This function only encrypts one single item in the predicate.
 // For example, it encrypts the integer 123 from `FH_id = 123`.
+
+// I think we should also introduce the corresponding local table into the encryption interface?
 Item *
 encrypt_item_layers(const Item &i, onion o, const OnionMeta &om,
-                    const Analysis &a, uint64_t IV)
+                    Analysis &a, uint64_t IV, const std::string &field_name)
 {
     assert(!RiboldMYSQL::is_null(i));
 
@@ -813,13 +858,22 @@ encrypt_item_layers(const Item &i, onion o, const OnionMeta &om,
 
     for (auto it = enc_layers.begin(); it != enc_layers.end(); it++)
     {
-        LOG(encl) << "encrypt layer "
+        std::cout << "encrypt layer "
                   << TypeText<SECLEVEL>::toText((*it)->level()) << "\n";
-        if (SECLEVEL::FHDET == (*it)->level() || SECLEVEL::FHOPE == (*it)->level())
+        if (SECLEVEL::FHOPE == (*it)->level())
         {
-            // do something.
-            std::cout << "encrypting for FH item whose name is " << i.name << std::endl;
-            new_enc = (*it)->encrypt(*enc, IV);
+            // set to zero.
+            const std::string db_name = a.getDatabaseName();
+            const std::string table_name = a.table_name_last_used;
+            // const std::string field_name = fm.fname;
+            // std::cout << db_name << table_name << field_name << std::endl;
+            // std::cout << RiboldMYSQL::val_real(i) << std::endl;
+            salt_type new_iv = a.local_table[VariableLocator(db_name, table_name, field_name)][RiboldMYSQL::val_real(i)];
+
+            std::cout << "encrypting for OPE item whose name is " << i.name << std::endl;
+            new_enc = (*it)->encrypt(*enc, padIV(field_name, new_iv));
+            // Then we should issue a call to pro_insert.
+            // TODO: insert ope command into updateOPEs.
         }
         else
         {
@@ -835,7 +889,7 @@ encrypt_item_layers(const Item &i, onion o, const OnionMeta &om,
 }
 
 std::string
-rewriteAndGetSingleQuery(const ProxyState &ps, const std::string &q,
+rewriteAndGetSingleQuery(ProxyState &ps, const std::string &q,
                          SchemaInfo const &schema,
                          const std::string &default_db)
 {
@@ -870,7 +924,7 @@ void encrypt_item_all_onions(const Item &i, const FieldMeta &fm,
     {
         const onion o = it.first->getValue();
         OnionMeta *const om = it.second;
-        l->push_back(encrypt_item_layers(i, o, *om, a, IV));
+        l->push_back(encrypt_item_layers(i, o, *om, a, IV, fm.fname));
     }
 }
 
@@ -888,6 +942,9 @@ bool writeDomToFile(const rapidjson::Document &doc, const std::string &path)
     return true;
 }
 
+/**
+ * This will also load the local table into Analysis.
+ */
 bool getDocumentFromFileAndLoadSalt(const std::string &path, Analysis &a, rapidjson::Document &doc)
 {
     FILE *in_file = fopen(path.c_str(), "r");
@@ -897,6 +954,7 @@ bool getDocumentFromFileAndLoadSalt(const std::string &path, Analysis &a, rapidj
     // Parse the file into DOM.
     doc.ParseStream(frs);
     a.loadSaltsFromJsonDOM(doc, "0");
+    a.loadLocalTable(doc);
     fclose(in_file);
 
     return true;
@@ -925,6 +983,9 @@ void typical_rewrite_insert_type(const Item &i, const FieldMeta &fm,
 
     if (needFrequencySmoothing(field_name))
     {
+        /**
+		 * TODO: ADD SUPPORT FOR OPE!
+		 */
         // Read from file.
         std::string dir = "CryptDB_DATA/";
         dir.append(db_name + '/');
@@ -933,6 +994,10 @@ void typical_rewrite_insert_type(const Item &i, const FieldMeta &fm,
 
         rapidjson::Document doc;
         assert(getDocumentFromFileAndLoadSalt(dir, a, doc));
+
+        /**
+		 * TODO: Loading local table into Analysis should also be implemented.
+		 */
 
         std::vector<double> &params = a.variables[VariableLocator(db_name, table_name, field_name)];
 
@@ -1063,7 +1128,7 @@ bool retrieveDefaultDatabase(unsigned long long thread_id,
 }
 
 // 获得重写后的SQL语句集
-void queryPreamble(const ProxyState &ps, const std::string &q,
+void queryPreamble(ProxyState &ps, const std::string &q,
                    std::unique_ptr<QueryRewrite> *const qr,
                    std::list<std::string> *const out_queryz,
                    SchemaCache *const schema_cache,
@@ -1146,7 +1211,7 @@ prettyPrintQueryResult(const ResType &res)
 }
 
 EpilogueResult
-queryEpilogue(const ProxyState &ps, const QueryRewrite &qr,
+queryEpilogue(ProxyState &ps, const QueryRewrite &qr,
               const ResType &res, const std::string &query,
               const std::string &default_db, bool pp)
 {

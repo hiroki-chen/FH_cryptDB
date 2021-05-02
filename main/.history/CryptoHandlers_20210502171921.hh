@@ -20,6 +20,7 @@
 #include <sql_insert.h>
 #include <sql_update.h>
 
+
 /* Class hierarchy:
  * EncLayer:
  * -  encrypts and decrypts data for a certain onion layer. It also
@@ -31,6 +32,7 @@
  * EncLayerFactory: creates EncLayer-s for SECLEVEL-s of interest
  */
 
+
 /*
  * TODO:
  *  -- anon name should not be in EncLayers
@@ -41,39 +43,36 @@ static std::string
 serial_pack(SECLEVEL l, const std::string &name,
             const std::string &layer_info)
 {
-    return std::to_string(layer_info.length()) + " " +
+    return std::to_string(layer_info.length()) + " " + 
            TypeText<SECLEVEL>::toText(l) + " " + name + " " + layer_info;
 }
 
-class EncLayer : public LeafDBMeta
-{
+class EncLayer : public LeafDBMeta {
 public:
-    virtual ~EncLayer(){};
+    virtual ~EncLayer() {};
     EncLayer() : LeafDBMeta() {}
     EncLayer(unsigned int id) : LeafDBMeta(id) {}
 
-    virtual std::string getKeyForJSON() const { return "-1"; }
-    std::string typeName() const { return type_name; }
-    static std::string instanceTypeName() { return type_name; }
+    virtual std::string getKeyForJSON() const { return "-1";}
+    std::string typeName() const {return type_name;}
+    static std::string instanceTypeName() {return type_name;}
 
     virtual SECLEVEL level() const = 0;
     virtual std::string name() const = 0;
 
     // returns a rewritten create field to include in rewritten query
     virtual Create_field *
-    newCreateField(const Create_field *const cf,
-                   const std::string &anonname = "") const = 0;
+        newCreateField(const Create_field * const cf,
+                       const std::string &anonname = "") const = 0;
     virtual Create_field *
-    buildCreateFieldEncoding(const Create_field *const cf) const
-    {
-        return nullptr;
-    }
+		buildCreateFieldEncoding(const Create_field * const cf) const
+    {return nullptr;}
 
     virtual Item *encrypt(const Item &ptext, uint64_t IV) const = 0;
-    virtual Item *decrypt(Item *const ctext, uint64_t IV) const = 0;
+    virtual Item *decrypt(Item * const ctext, uint64_t IV) const = 0;
 
     // returns the decryptUDF to remove the onion layer
-    virtual Item *decryptUDF(Item *const col, Item *const ivcol = NULL)
+    virtual Item *decryptUDF(Item * const col, Item * const ivcol = NULL)
         const
     {
         thrower() << "decryptUDF not supported";
@@ -87,30 +86,29 @@ public:
     }
 
 protected:
-    friend class EncLayerFactory;
+     friend class EncLayerFactory;
 
 private:
-    constexpr static const char *type_name = "encLayer";
+     constexpr static const char * type_name = "encLayer";
 };
 
-class HOM : public EncLayer
-{
+class HOM : public EncLayer {
 public:
-    HOM(Create_field *const cf, const std::string &seed_key);
+    HOM(Create_field * const cf, const std::string &seed_key);
 
     // serialize and deserialize
-    std::string doSerialize() const { return seed_key; }
+    std::string doSerialize() const {return seed_key;}
     HOM(unsigned int id, const std::string &serial);
 
-    SECLEVEL level() const { return SECLEVEL::HOM; }
-    std::string name() const { return "HOM"; }
-    Create_field *newCreateField(const Create_field *const cf,
-                                 const std::string &anonname = "")
+    SECLEVEL level() const {return SECLEVEL::HOM;}
+    std::string name() const {return "HOM";}
+    Create_field * newCreateField(const Create_field * const cf,
+                                  const std::string &anonname = "")
         const;
 
     //TODO needs multi encrypt and decrypt
     Item *encrypt(const Item &p, uint64_t IV) const;
-    Item *decrypt(Item *const c, uint64_t IV) const;
+    Item * decrypt(Item * const c, uint64_t IV) const;
 
     //expr is the expression (e.g. a field) over which to sum
     Item *sumUDA(Item *const expr) const;
@@ -119,7 +117,7 @@ public:
 protected:
     std::string const seed_key;
     static const uint nbits = 1024;
-    mutable Paillier_priv *sk;
+    mutable Paillier_priv * sk;
 
     ~HOM();
 
@@ -129,65 +127,63 @@ private:
     mutable bool waiting;
 };
 
-class Search : public EncLayer
-{
+class Search : public EncLayer {
 public:
-    Search(Create_field *const cf, const std::string &seed_key);
+    Search(Create_field * const cf, const std::string &seed_key);
 
     // serialize and deserialize
-    std::string doSerialize() const { return key; }
+    std::string doSerialize() const {return key;}
     Search(unsigned int id, const std::string &serial);
 
-    SECLEVEL level() const { return SECLEVEL::SEARCH; }
-    std::string name() const { return "SEARCH"; }
-    Create_field *newCreateField(const Create_field *const cf,
-                                 const std::string &anonname = "")
+    SECLEVEL level() const {return SECLEVEL::SEARCH;}
+    std::string name() const {return "SEARCH";}
+    Create_field * newCreateField(const Create_field * const cf,
+                                  const std::string &anonname = "")
         const;
 
     Item *encrypt(const Item &ptext, uint64_t IV) const;
-    Item *decrypt(Item *const ctext, uint64_t IV) const
+    Item * decrypt(Item * const ctext, uint64_t IV) const
         __attribute__((noreturn));
 
     //expr is the expression (e.g. a field) over which to sum
-    Item *searchUDF(Item *const field, Item *const expr) const;
+    Item * searchUDF(Item * const field, Item * const expr) const;
 
 private:
     static const uint key_bytes = 16;
     std::string const key;
 };
 
-extern const std::vector<udf_func *> udf_list;
+extern const std::vector<udf_func*> udf_list;
 
-class EncLayerFactory
-{
+class EncLayerFactory {
 public:
-    static EncLayer *encLayer(onion o, SECLEVEL sl,
-                              Create_field *const cf,
-                              const std::string &key);
+    static EncLayer * encLayer(onion o, SECLEVEL sl,
+                               Create_field * const cf,
+                               const std::string &key);
 
     // creates EncLayer from its serialization
-    static EncLayer *deserializeLayer(unsigned int id,
-                                      const std::string &serial);
+    static EncLayer * deserializeLayer(unsigned int id,
+                                       const std::string &serial);
 
     // static std::string serializeLayer(EncLayer * el, DBMeta *parent);
 };
 
-class PlainText : public EncLayer
-{
+class PlainText : public EncLayer {
 public:
     PlainText() {}
     PlainText(unsigned int id) : EncLayer(id) {}
-    virtual ~PlainText() { ; }
+    virtual ~PlainText() {;}
 
-    virtual SECLEVEL level() const { return SECLEVEL::PLAINVAL; }
-    virtual std::string name() const { return "PLAINTEXT"; }
+    virtual SECLEVEL level() const {return SECLEVEL::PLAINVAL;}
+    virtual std::string name() const {return "PLAINTEXT";}
 
-    virtual Create_field *newCreateField(const Create_field *const cf,
+    virtual Create_field *newCreateField(const Create_field * const cf,
                                          const std::string &anonname = "")
         const;
     Item *encrypt(const Item &ptext, uint64_t IV) const;
-    Item *decrypt(Item *const ctext, uint64_t IV) const;
-    Item *decryptUDF(Item *const col, Item *const ivcol = NULL)
+    Item *decrypt(Item * const ctext, uint64_t IV) const;
+    Item *decryptUDF(Item * const col, Item * const ivcol = NULL)
         const __attribute__((noreturn));
     std::string doSerialize() const;
 };
+

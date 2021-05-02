@@ -31,45 +31,42 @@
 #include <util/cleanup.hh>
 #include <util/rob.hh>
 
-struct Result
-{
-    int result_size; // 传输的大小
-    int name_size;   // 属性集的大小
-    int name_num;    // 属性的个数
-    int type_size;   // 类型集的大小
-    int type_num;    // 类型的个数
-    int data_size;   // 结果集的大小
-    int data_row;    // 结果集的行数
-    int data_col;    // 结果集的列数
-    int query_size;  // 查询语句大小
-    char result[0];  // 四合一
-    //  char *query;      // 查询语句
-    //	char name[0];     // 属性集
-    //	char type[0];     // 类型集
-    //	char data[0];     // 结果集
+struct Result{
+	int  result_size; // 传输的大小
+	int  name_size;   // 属性集的大小
+	int  name_num;    // 属性的个数
+	int  type_size;   // 类型集的大小
+	int  type_num;    // 类型的个数
+	int  data_size;   // 结果集的大小
+	int  data_row;    // 结果集的行数
+	int  data_col;    // 结果集的列数
+	int  query_size;  // 查询语句大小
+	char result[0];   // 四合一
+//  char *query;      // 查询语句
+//	char name[0];     // 属性集
+//	char type[0];     // 类型集
+//	char data[0];     // 结果集
 };
 
 // 传递数据的长度和类型s
-struct SizeType
-{
-    int size;
-    int type;
+struct SizeType{
+	int size;
+	int type;
 };
 
 // SQL语句
-struct SQL
-{
-    int sql_size; // 大小
-    int number;   // 传递SQL语句个数
-    char sql[0];  // SQL语句
+struct SQL {
+	int  sql_size;  // 大小
+	int  number;   // 传递SQL语句个数
+	char sql[0];   // SQL语句
 };
 
 extern std::string global_crash_point;
 
-void crashTest(const std::string &current_point);
+void
+crashTest(const std::string &current_point);
 
-class FieldReturned
-{
+class FieldReturned {
 public:
     bool encrypted;
     bool includeInResult;
@@ -78,7 +75,8 @@ public:
     std::string nameForReturn;
 };
 
-void printRes(const ResType &r);
+void
+printRes(const ResType & r);
 
 ResType
 mysql_noop_res(const ProxyState &ps);
@@ -86,43 +84,42 @@ mysql_noop_res(const ProxyState &ps);
 //contains the results of a query rewrite:
 // - rewritten queries
 // - data structure needed to decrypt results
-class QueryRewrite
-{
+class QueryRewrite {
 public:
     QueryRewrite(bool wasRes, ReturnMeta rmeta, RewriteOutput *output)
         : rmeta(rmeta), output(std::unique_ptr<RewriteOutput>(output)) {}
     QueryRewrite(QueryRewrite &&other_qr) : rmeta(other_qr.rmeta),
-                                            output(std::move(other_qr.output)) {}
-    const ReturnMeta rmeta;                // 返回的结果集
+        output(std::move(other_qr.output)) {}
+    const ReturnMeta rmeta; // 返回的结果集
     std::unique_ptr<RewriteOutput> output; // 重写后的SQL语句集
 };
 
 // Main class processing rewriting
 // 重写操作和结果解密的实际执行类
-class Rewriter
-{
+class Rewriter {
     Rewriter();
     ~Rewriter();
 
 public:
+
     // 重写操作的实际执行类
     static QueryRewrite
-    rewrite(ProxyState &ps, const std::string &q,
-            SchemaInfo const &schema, const std::string &default_db);
+        rewrite(ProxyState &ps, const std::string &q,
+                SchemaInfo const &schema, const std::string &default_db);
     static ResType
-    decryptResults(const ResType &dbres, const ReturnMeta &rm);
+        decryptResults(const ResType &dbres, const ReturnMeta &rm);
 
 private:
     static RewriteOutput *
-    dispatchOnLex(Analysis &a, ProxyState &ps,
-                  const std::string &query);
+        dispatchOnLex(Analysis &a, ProxyState &ps,
+                      const std::string &query);
 
     static LEX *
-    transformForWhereClause(LEX *lex, Analysis &a);
+		transformForWhereClause(LEX *lex, Analysis &a);
 
     static RewriteOutput *
-    handleDirective(Analysis &a, const ProxyState &ps,
-                    const std::string &query);
+        handleDirective(Analysis &a, const ProxyState &ps,
+                        const std::string &query);
 
     static const bool translator_dummy;
     static const std::unique_ptr<SQLDispatcher> dml_dispatcher;
@@ -134,42 +131,45 @@ class EpilogueResult;
 EpilogueResult
 executeQuery(ProxyState &ps, const std::string &q,
              const std::string &default_db,
-             SchemaCache *const schema_cache, bool pp = true);
+             SchemaCache *const schema_cache, bool pp=true);
 
 /*
  * change
  */
 std::list<std::string>
 RewriteQuery(ProxyState &ps, const std::string &q,
-             const std::string &default_db,
-             SchemaCache *const schema_cache, bool pp = true);
+		const std::string &default_db,
+        SchemaCache *const schema_cache, bool pp=true);
 
-struct Result *
+struct Result*
 DecryptResult(ProxyState &ps, const std::string &q,
-              const std::string &default_db, struct Result *res,
-              SchemaCache *const schema_cache, bool pp);
+             const std::string &default_db, struct Result* res,
+             SchemaCache *const schema_cache, bool pp);
 
-ResType ResultToResType(struct Result *result); // ResultToResType
-struct Result *ResTypeToResult(ResType &resPlain, ResType &resCipher, char *query);
-void printResult(struct Result *result);
-void printResType(const ResType &restype);
+ResType   ResultToResType(struct Result* result); // ResultToResType
+struct Result*  ResTypeToResult(ResType& resPlain, ResType& resCipher, char* query);
+void printResult(struct Result* result);
+void printResType(const ResType& restype);
 
 char getHexChar(char i);
 char getBYteValue(char i);
-char *EncodeBase64(char *buf, long size);
+char* EncodeBase64(char* buf, long size);
 char *DecodeBase64(char *base64Char, long base64CharSize);
 
-bool isDETFunc(const Item_func &item);
+bool
+isDETFunc(const Item_func &item);
 
 unsigned long long
 getSaltCount(const std::string &db_name, const std::string &table_name, const std::string &field_name,
-             const std::string &val, Analysis &a);
+			   const std::string &val, Analysis &a);
+
 
 unsigned long long
 do_get_salt_count(const std::string &dir, const std::string &file_name,
-                  const std::string &val, Analysis &a);
+				    const std::string &val, Analysis &a);
 
-LEX *do_transform_where(const LEX &lex, Analysis &a);
+LEX *
+do_transform_where(const LEX &lex, Analysis &a);
 
 Item *
 typical_do_transform_where(const Item &item, Analysis &a);
@@ -183,16 +183,15 @@ do_transform_where_or(const Item_cond_or &item_cond_or, Analysis &a);
 Item *
 makeItemCondPairs(const Item_func &item, Analysis &a);
 
-#define UNIMPLEMENTED                                         \
-    throw std::runtime_error(std::string("Unimplemented: ") + \
-                             std::string(__PRETTY_FUNCTION__))
+#define UNIMPLEMENTED \
+        throw std::runtime_error(std::string("Unimplemented: ") + \
+                        std::string(__PRETTY_FUNCTION__))
 
 class reason;
 class OLK;
 
-class CItemType
-{
-public:
+class CItemType {
+ public:
     virtual RewritePlan *do_gather(const Item &, Analysis &)
         const = 0;
     virtual Item *do_optimize(Item *, Analysis &) const = 0;
@@ -207,18 +206,17 @@ public:
 /*
  * CItemType classes for supported Items: supporting machinery.
  */
-template <class T>
-class CItemSubtype : public CItemType
-{
+template<class T>
+class CItemSubtype : public CItemType {
     virtual RewritePlan *do_gather(const Item &i, Analysis &a)
-        const
+       const
     {
         return do_gather_type(static_cast<const T &>(i), a);
     }
 
-    virtual Item *do_optimize(Item *i, Analysis &a) const
+    virtual Item *do_optimize(Item *i, Analysis & a) const
     {
-        return do_optimize_type((T *)i, a);
+        return do_optimize_type((T*) i, a);
     }
 
     virtual Item *do_rewrite(const Item &i, const OLK &constr,
@@ -235,13 +233,13 @@ class CItemSubtype : public CItemType
         do_rewrite_insert_type(static_cast<const T &>(i), fm, a, l);
     }
 
-private:
+ private:
     virtual RewritePlan *do_gather_type(const T &i, Analysis &a) const
     {
         UNIMPLEMENTED;
     }
 
-    virtual Item *do_optimize_type(T *i, Analysis &a) const
+    virtual Item *do_optimize_type(T *i, Analysis & a) const
     {
         UNIMPLEMENTED;
         // do_optimize_const_item(i, a);
@@ -262,18 +260,18 @@ private:
     }
 };
 
+
+
 /*
  * Directories for locating an appropriate CItemType for a given Item.
  */
 template <class T>
-class CItemTypeDir : public CItemType
-{
-public:
+class CItemTypeDir : public CItemType {
+ public:
     void reg(T t, const CItemType &ct)
     {
         auto x = types.find(t);
-        if (x != types.end())
-        {
+        if (x != types.end()) {
             thrower() << "duplicate key " << t << std::endl;
         }
         types.insert(std::make_pair(t, &ct));
@@ -284,7 +282,7 @@ public:
         return lookup(i).do_gather(i, a);
     }
 
-    Item *do_optimize(Item *i, Analysis &a) const
+    Item* do_optimize(Item *i, Analysis &a) const
     {
         return lookup(*i).do_optimize(i, a);
     }
@@ -309,20 +307,18 @@ protected:
     {
         auto x = types.find(t);
         // std::cout << "find type of " << i << std::endl;
-        if (x == types.end())
-        {
+        if (x == types.end()) {
             thrower() << "missing " << errname << " " << t << " in "
                       << i << std::endl;
         }
         return *x->second;
     }
 
-private:
-    std::map<T, const CItemType *const> types;
+ private:
+    std::map<T, const CItemType *const > types;
 };
 
-class CItemTypesDir : public CItemTypeDir<Item::Type>
-{
+class CItemTypesDir : public CItemTypeDir<Item::Type> {
     const CItemType &lookup(const Item &i) const
     {
         return do_lookup(i, i.type(), "type");
@@ -331,8 +327,7 @@ class CItemTypesDir : public CItemTypeDir<Item::Type>
 
 extern CItemTypesDir itemTypes;
 
-class CItemFuncDir : public CItemTypeDir<Item_func::Functype>
-{
+class CItemFuncDir : public CItemTypeDir<Item_func::Functype> {
     const CItemType &lookup(const Item &i) const
     {
         return do_lookup(i, static_cast<const Item_func &>(i).functype(),
@@ -349,8 +344,7 @@ public:
 
 extern CItemFuncDir funcTypes;
 
-class CItemSumFuncDir : public CItemTypeDir<Item_sum::Sumfunctype>
-{
+class CItemSumFuncDir : public CItemTypeDir<Item_sum::Sumfunctype> {
     const CItemType &lookup(const Item &i) const
     {
         return do_lookup(i, static_cast<const Item_sum &>(i).sum_func(),
@@ -366,8 +360,8 @@ public:
 
 extern CItemSumFuncDir sumFuncTypes;
 
-class CItemFuncNameDir : public CItemTypeDir<std::string>
-{
+
+class CItemFuncNameDir : public CItemTypeDir<std::string> {
     const CItemType &lookup(const Item &i) const
     {
         return do_lookup(i, static_cast<const Item_func &>(i).func_name(),
@@ -375,8 +369,7 @@ class CItemFuncNameDir : public CItemTypeDir<std::string>
     }
 
 public:
-    CItemFuncNameDir()
-    {
+    CItemFuncNameDir() {
         funcTypes.reg(Item_func::Functype::UNKNOWN_FUNC, *this);
         funcTypes.reg(Item_func::Functype::NOW_FUNC, *this);
     }
@@ -384,30 +377,27 @@ public:
 
 extern CItemFuncNameDir funcNames;
 
-template <class T, Item::Type TYPE>
-class CItemSubtypeIT : public CItemSubtype<T>
-{
+
+template<class T, Item::Type TYPE>
+class CItemSubtypeIT : public CItemSubtype<T> {
 public:
     CItemSubtypeIT() { itemTypes.reg(TYPE, *this); }
 };
 
-template <class T, Item_func::Functype TYPE>
-class CItemSubtypeFT : public CItemSubtype<T>
-{
+template<class T, Item_func::Functype TYPE>
+class CItemSubtypeFT : public CItemSubtype<T> {
 public:
     CItemSubtypeFT() { funcTypes.reg(TYPE, *this); }
 };
 
-template <class T, Item_sum::Sumfunctype TYPE>
-class CItemSubtypeST : public CItemSubtype<T>
-{
+template<class T, Item_sum::Sumfunctype TYPE>
+class CItemSubtypeST : public CItemSubtype<T> {
 public:
     CItemSubtypeST() { sumFuncTypes.reg(TYPE, *this); }
 };
 
-template <class T, const char *TYPE>
-class CItemSubtypeFN : public CItemSubtype<T>
-{
+template<class T, const char *TYPE>
+class CItemSubtypeFN : public CItemSubtype<T> {
 public:
     CItemSubtypeFN() { funcNames.reg(std::string(TYPE), *this); }
 };
@@ -416,11 +406,10 @@ SchemaInfo *
 loadSchemaInfo(const std::unique_ptr<Connect> &conn,
                const std::unique_ptr<Connect> &e_conn);
 
-class OnionMetaAdjustor
-{
+class OnionMetaAdjustor {
 public:
     OnionMetaAdjustor(OnionMeta const &om) : original_om(om),
-                                             duped_layers(pullCopyLayers(om)) {}
+        duped_layers(pullCopyLayers(om)) {}
     ~OnionMetaAdjustor() {}
 
     EncLayer &getBackEncLayer() const;
