@@ -15,18 +15,17 @@
 
 extern "C" void *create_embedded_thd(int client_flag);
 
-class ReturnField
-{
+class ReturnField {
 public:
     ReturnField(bool is_salt, const std::string &field_called,
                 const OLK &olk, int salt_pos)
         : is_salt(is_salt), field_called(field_called), olk(olk),
           salt_pos(salt_pos) {}
 
-    bool getIsSalt() const { return is_salt; }
-    std::string fieldCalled() const { return field_called; }
-    const OLK getOLK() const { return olk; }
-    int getSaltPosition() const { return salt_pos; }
+    bool getIsSalt() const {return is_salt;}
+    std::string fieldCalled() const {return field_called;}
+    const OLK getOLK() const {return olk;}
+    int getSaltPosition() const {return salt_pos;}
     std::string stringify();
 
 private:
@@ -38,14 +37,13 @@ private:
                         // salt was not requested
 };
 
-typedef struct ReturnMeta
-{
+typedef struct ReturnMeta {
     std::map<int, ReturnField> rfmeta;
     std::string stringify();
 } ReturnMeta;
 
-class OnionAdjustExcept
-{
+
+class OnionAdjustExcept {
 public:
     OnionAdjustExcept(const TableMeta &tm, const FieldMeta &fm, onion o,
                       SECLEVEL l)
@@ -58,8 +56,7 @@ public:
 };
 
 // TODO: Maybe we want a database name argument/member.
-typedef class ConnectionInfo
-{
+typedef class ConnectionInfo {
 public:
     std::string server;
     uint port;
@@ -68,19 +65,18 @@ public:
 
     ConnectionInfo(const std::string &s, const std::string &u,
                    const std::string &p, uint port = 0)
-        : server(s), port(port), user(u), passwd(p){};
-    ConnectionInfo() : server(""), port(0), user(""), passwd(""){};
+        : server(s), port(port), user(u), passwd(p) {};
+    ConnectionInfo() : server(""), port(0), user(""), passwd("") {};
 
 } ConnectionInfo;
 
 // state maintained at the proxy
 // 代理中存储的连接信息
-typedef struct ProxyState
-{
+typedef struct ProxyState {
     ProxyState(ConnectionInfo ci, const std::string &embed_dir,
                const std::string &master_key,
                SECURITY_RATING default_sec_rating =
-                   SECURITY_RATING::SENSITIVE);
+                SECURITY_RATING::SENSITIVE);
     ~ProxyState();
     SECURITY_RATING defaultSecurityRating() const
     {
@@ -91,13 +87,9 @@ typedef struct ProxyState
     {
         return masterKey;
     }
-    const std::unique_ptr<Connect> &getConn() const { return conn; } // 连接信息，connect=mysql类型
-    const std::unique_ptr<Connect> &getEConn() const { return e_conn; }
-    void close()
-    {
-        conn->close();
-        e_conn->close();
-    }
+    const std::unique_ptr<Connect> &getConn() const {return conn;} // 连接信息，connect=mysql类型
+    const std::unique_ptr<Connect> &getEConn() const {return e_conn;}
+    void close(){ conn->close(); e_conn->close(); }
     static int db_init(const std::string &embed_dir);
 
     bool updateOPE;
@@ -113,15 +105,11 @@ private:
     const SECURITY_RATING default_sec_rating;
 } ProxyState;
 
+
 // For REPLACE and DELETE we are duplicating the MetaKey information.
-class Delta
-{
+class Delta {
 public:
-    enum TableType
-    {
-        REGULAR_TABLE,
-        BLEEDING_TABLE
-    };
+    enum TableType {REGULAR_TABLE, BLEEDING_TABLE};
 
     Delta(const DBMeta &parent_meta) : parent_meta(parent_meta) {}
 
@@ -142,8 +130,7 @@ protected:
 // parent_meta have not yet been associated such that the key can be
 // functionally derived.
 template <typename KeyType>
-class AbstractCreateDelta : public Delta
-{
+class AbstractCreateDelta : public Delta {
 public:
     AbstractCreateDelta(const DBMeta &parent_meta,
                         const KeyType &key)
@@ -153,8 +140,7 @@ protected:
     const KeyType key;
 };
 
-class CreateDelta : public AbstractCreateDelta<IdentityMetaKey>
-{
+class CreateDelta : public AbstractCreateDelta<IdentityMetaKey> {
 public:
     CreateDelta(std::unique_ptr<DBMeta> &&meta,
                 const DBMeta &parent_meta,
@@ -162,7 +148,7 @@ public:
         : AbstractCreateDelta(parent_meta, key), meta(std::move(meta)) {}
 
     bool save(const std::unique_ptr<Connect> &e_conn,
-              unsigned long *const delta_output_id);
+              unsigned long * const delta_output_id);
     bool apply(const std::unique_ptr<Connect> &e_conn,
                TableType table_type);
     bool destroyRecord(const std::unique_ptr<Connect> &e_conn);
@@ -171,42 +157,38 @@ private:
     const std::unique_ptr<DBMeta> meta;
 };
 
-class DerivedKeyDelta : public Delta
-{
+class DerivedKeyDelta : public Delta {
 public:
     DerivedKeyDelta(const DBMeta &meta,
                     const DBMeta &parent_meta)
         : Delta(parent_meta), meta(meta),
           key(parent_meta.getKey(meta))
-    {
-    }
+    {}
 
 protected:
     const DBMeta &meta;
     const AbstractMetaKey &key;
 };
 
-class ReplaceDelta : public DerivedKeyDelta
-{
+class ReplaceDelta : public DerivedKeyDelta {
 public:
     ReplaceDelta(const DBMeta &meta, const DBMeta &parent_meta)
         : DerivedKeyDelta(meta, parent_meta) {}
 
     bool save(const std::unique_ptr<Connect> &e_conn,
-              unsigned long *const delta_output_id);
+              unsigned long * const delta_output_id);
     bool apply(const std::unique_ptr<Connect> &e_conn,
                TableType table_type);
     bool destroyRecord(const std::unique_ptr<Connect> &e_conn);
 };
 
-class DeleteDelta : public DerivedKeyDelta
-{
+class DeleteDelta : public DerivedKeyDelta {
 public:
     DeleteDelta(const DBMeta &meta, const DBMeta &parent_meta)
         : DerivedKeyDelta(meta, parent_meta) {}
 
     bool save(const std::unique_ptr<Connect> &e_conn,
-              unsigned long *const delta_output_id);
+              unsigned long * const delta_output_id);
     bool apply(const std::unique_ptr<Connect> &e_conn,
                TableType table_type);
     bool destroyRecord(const std::unique_ptr<Connect> &e_conn);
@@ -214,16 +196,10 @@ public:
 
 class Rewriter;
 
-enum class QueryAction
-{
-    VANILLA,
-    AGAIN,
-    ROLLBACK
-};
+enum class QueryAction {VANILLA, AGAIN, ROLLBACK};
 
 // 重写后的SQL语句结果总类，分别下属了simpleoutput、ddloutput、dmloutput
-class RewriteOutput
-{
+class RewriteOutput {
 public:
     RewriteOutput(const std::string &original_query)
         : original_query(original_query) {}
@@ -249,32 +225,30 @@ protected:
     const std::string original_query;
 };
 
-class SimpleOutput : public RewriteOutput
-{
+class SimpleOutput : public RewriteOutput {
 public:
     SimpleOutput(const std::string &original_query)
         : RewriteOutput(original_query) {}
-    ~SimpleOutput() { ; }
+    ~SimpleOutput() {;}
 
     void beforeQuery(const std::unique_ptr<Connect> &conn,
                      const std::unique_ptr<Connect> &e_conn);
-    void getQuery(std::list<std::string> *const queryz,
+    void getQuery(std::list<std::string> * const queryz,
                   SchemaInfo const &schema) const;
     void afterQuery(const std::unique_ptr<Connect> &e_conn) const;
     bool doDecryption() const;
 };
 
-class DMLOutput : public RewriteOutput
-{
+class DMLOutput : public RewriteOutput {
 public:
     DMLOutput(const std::string &original_query,
               const std::string &new_query)
         : RewriteOutput(original_query), new_query(new_query) {}
-    ~DMLOutput() { ; }
+    ~DMLOutput() {;}
 
     void beforeQuery(const std::unique_ptr<Connect> &conn,
                      const std::unique_ptr<Connect> &e_conn);
-    void getQuery(std::list<std::string> *const queryz,
+    void getQuery(std::list<std::string> * const queryz,
                   SchemaInfo const &schema) const;
     void afterQuery(const std::unique_ptr<Connect> &e_conn) const;
 
@@ -283,8 +257,7 @@ private:
 };
 
 // Special case of DML query.
-class SpecialUpdate : public RewriteOutput
-{
+class SpecialUpdate : public RewriteOutput {
 public:
     SpecialUpdate(const std::string &original_query,
                   const std::string &plain_table,
@@ -292,14 +265,14 @@ public:
                   const std::string &where_clause,
                   const std::string &default_db,
                   const ProxyState &ps)
-        : RewriteOutput(original_query),
-          plain_table(plain_table), crypted_table(crypted_table),
-          where_clause(where_clause), default_db(default_db), ps(ps) {}
-    ~SpecialUpdate() { ; }
+    : RewriteOutput(original_query),
+      plain_table(plain_table), crypted_table(crypted_table),
+      where_clause(where_clause), default_db(default_db), ps(ps) {}
+    ~SpecialUpdate() {;}
 
     void beforeQuery(const std::unique_ptr<Connect> &conn,
                      const std::unique_ptr<Connect> &e_conn);
-    void getQuery(std::list<std::string> *const queryz,
+    void getQuery(std::list<std::string> * const queryz,
                   SchemaInfo const &schema) const;
     void afterQuery(const std::unique_ptr<Connect> &e_conn) const;
     bool multipleResultSets() const;
@@ -316,30 +289,25 @@ private:
     AssignOnce<bool> do_nothing;
 };
 
-enum class CompletionType
-{
-    DDLCompletion,
-    AdjustOnionCompletion
-};
+enum class CompletionType {DDLCompletion, AdjustOnionCompletion};
 
-class DeltaOutput : public RewriteOutput
-{
+class DeltaOutput : public RewriteOutput {
 public:
     DeltaOutput(const std::string &original_query,
-                std::vector<std::unique_ptr<Delta>> &&deltas)
+                std::vector<std::unique_ptr<Delta> > &&deltas)
         : RewriteOutput(original_query), deltas(std::move(deltas)) {}
     virtual ~DeltaOutput() = 0;
 
     void beforeQuery(const std::unique_ptr<Connect> &conn,
                      const std::unique_ptr<Connect> &e_conn);
-    virtual void getQuery(std::list<std::string> *const queryz,
+    virtual void getQuery(std::list<std::string> * const queryz,
                           SchemaInfo const &schema) const = 0;
     void afterQuery(const std::unique_ptr<Connect> &e_conn) const;
     bool stalesSchema() const;
     bool usesEmbeddedDB() const;
 
 protected:
-    const std::vector<std::unique_ptr<Delta>> deltas;
+    const std::vector<std::unique_ptr<Delta> > deltas;
 
     unsigned long getEmbeddedCompletionID() const;
     virtual CompletionType getCompletionType() const = 0;
@@ -348,17 +316,16 @@ private:
     AssignOnce<unsigned long> embedded_completion_id;
 };
 
-class DDLOutput : public DeltaOutput
-{
+class DDLOutput : public DeltaOutput {
 public:
     DDLOutput(const std::string &original_query,
               const std::string &new_query,
-              std::vector<std::unique_ptr<Delta>> &&deltas)
+              std::vector<std::unique_ptr<Delta> > &&deltas)
         : DeltaOutput(original_query, std::move(deltas)),
           new_query(new_query) {}
-    ~DDLOutput() { ; }
+    ~DDLOutput() {;}
 
-    void getQuery(std::list<std::string> *const queryz,
+    void getQuery(std::list<std::string> * const queryz,
                   SchemaInfo const &schema) const;
     void afterQuery(const std::unique_ptr<Connect> &e_conn) const;
 
@@ -372,20 +339,19 @@ private:
     const std::list<std::string> local_qz() const;
 };
 
-class AdjustOnionOutput : public DeltaOutput
-{
+class AdjustOnionOutput : public DeltaOutput {
 public:
     AdjustOnionOutput(const std::string &original_query,
-                      std::vector<std::unique_ptr<Delta>> &&deltas,
+                      std::vector<std::unique_ptr<Delta> > &&deltas,
                       std::list<std::string> adjust_queries,
                       std::function<std::string(const std::string &)>
-                          hackEscape)
+                        hackEscape)
         : DeltaOutput(original_query, std::move(deltas)),
           adjust_queries(adjust_queries), hackEscape(hackEscape) {}
-    ~AdjustOnionOutput() { ; }
+    ~AdjustOnionOutput() {;}
     void beforeQuery(const std::unique_ptr<Connect> &conn,
                      const std::unique_ptr<Connect> &e_conn);
-    void getQuery(std::list<std::string> *const queryz,
+    void getQuery(std::list<std::string> * const queryz,
                   SchemaInfo const &schema) const;
     void afterQuery(const std::unique_ptr<Connect> &e_conn) const;
     QueryAction queryAction(const std::unique_ptr<Connect> &conn) const;
@@ -411,8 +377,7 @@ bool setRegularTableToBleedingTable(const std::unique_ptr<Connect> &e_conn);
 bool setBleedingTableToRegularTable(const std::unique_ptr<Connect> &e_conn);
 
 class RewritePlan;
-class Analysis
-{
+class Analysis {
     Analysis() = delete;
     Analysis(const Analysis &a) = delete;
     Analysis(Analysis &&a) = delete;
@@ -422,7 +387,7 @@ class Analysis
 public:
     Analysis(const std::string &default_db, const SchemaInfo &schema)
         : pos(0), updateOPE(false), encoding_field_num(0), update(false),
-          special_update(false), db_name(default_db), schema(schema) {}
+		  special_update(false), db_name(default_db), schema(schema)  {}
 
     unsigned int pos; // > a counter indicating how many projection
                       // fields have been analyzed so far
@@ -461,7 +426,7 @@ public:
 
     // FIXME: make them private would be better.
 
-    std::map<const Item *, std::unique_ptr<RewritePlan>> rewritePlans;
+    std::map<const Item *, std::unique_ptr<RewritePlan> > rewritePlans;
     std::map<std::string, std::map<const std::string, const std::string>>
         table_aliases;
     std::map<const Item_field *, std::pair<Item_field *, OLK>> item_cache;
@@ -502,8 +467,8 @@ public:
     std::string getAnonTableName(const std::string &db,
                                  const std::string &table) const;
     std::string
-    translateNonAliasPlainToAnonTableName(const std::string &db,
-                                          const std::string &table)
+        translateNonAliasPlainToAnonTableName(const std::string &db,
+                                              const std::string &table)
         const;
     std::string getAnonIndexName(const std::string &db,
                                  const std::string &table,
@@ -515,12 +480,12 @@ public:
     static EncLayer &getBackEncLayer(const OnionMeta &om);
     static SECLEVEL getOnionLevel(const OnionMeta &om);
     static std::vector<std::unique_ptr<EncLayer>> const &
-    getEncLayers(const OnionMeta &om);
-    const SchemaInfo &getSchema() { return schema; }
+        getEncLayers(const OnionMeta &om);
+    const SchemaInfo &getSchema() {return schema;}
 
-    std::vector<std::unique_ptr<Delta>> deltas;
+    std::vector<std::unique_ptr<Delta> > deltas;
 
-    std::string getDatabaseName() const { return db_name; }
+    std::string getDatabaseName() const {return db_name;}
 
 private:
     const std::string db_name;
@@ -532,11 +497,14 @@ private:
                              const std::string &table) const;
 };
 
-bool lowLevelGetCurrentDatabase(const std::unique_ptr<Connect> &c,
-                                std::string *const out_db);
+bool
+lowLevelGetCurrentDatabase(const std::unique_ptr<Connect> &c,
+                           std::string *const out_db);
 
-bool lowLevelSetCurrentDatabase(const std::unique_ptr<Connect> &c,
-                                const std::string &db);
+bool
+lowLevelSetCurrentDatabase(const std::unique_ptr<Connect> &c,
+                           const std::string &db);
 
 std::vector<std::string>
 getAllUDFs();
+

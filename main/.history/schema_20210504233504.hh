@@ -39,39 +39,40 @@ class Salt;
 const std::string possible_characters = "0123456789";
 std::string getRandomString(const unsigned int &length);
 
-typedef class Salt
-{
+typedef class Salt {
 public:
     Salt() {}
 
-    Salt(const unsigned long &salt_length) : salt_name(getRandomString(salt_length)), count(1) {}
+    Salt(const unsigned long &salt_length) :
+            salt_name(getRandomString(salt_length)), count(1) {}
 
-    Salt(const unsigned long &_count, const std::string &_salt_name) : salt_name(_salt_name), count(_count) {}
+    Salt(const unsigned long& _count, const std::string &_salt_name) :
+    	salt_name(_salt_name), count(_count) {}
 
-    unsigned long getCount() const { return count; }
+    unsigned long getCount() const {return count;}
 
-    bool incrementCount() { return (count++); }
+    bool incrementCount() {return (count++);}
 
-    bool decrementCount() { return (--count); }
+    bool decrementCount() {return (--count);}
 
-    std::string getSaltName() const { return salt_name; }
+    std::string getSaltName() const {return salt_name;}
 
 private:
     const std::string salt_name;
     unsigned long count; // The number of ciphertexts encrypted by this salt.
 } Salt;
 
-typedef class OnionMeta : public DBMeta
-{
+
+typedef class OnionMeta : public DBMeta {
 public:
     // New.
     OnionMeta(onion o, std::vector<SECLEVEL> levels,
-              const AES_KEY *const m_key, Create_field *const cf,
+              const AES_KEY * const m_key, Create_field * const cf,
               unsigned long uniq_count);
 
     // Restore.
     static std::unique_ptr<OnionMeta>
-    deserialize(unsigned int id, const std::string &serial);
+        deserialize(unsigned int id, const std::string &serial);
     OnionMeta(unsigned int id, const std::string &onionname,
               unsigned long uniq_count)
         : DBMeta(id), onionname(onionname), uniq_count(uniq_count) {}
@@ -79,16 +80,16 @@ public:
     std::string serialize(const DBObject &parent) const;
     std::string getAnonOnionName() const;
     // FIXME: Use rtti.
-    std::string typeName() const { return type_name; }
-    static std::string instanceTypeName() { return type_name; }
+    std::string typeName() const {return type_name;}
+    static std::string instanceTypeName() {return type_name;}
     std::vector<DBMeta *>
-    fetchChildren(const std::unique_ptr<Connect> &e_conn);
+        fetchChildren(const std::unique_ptr<Connect> &e_conn);
     bool applyToChildren(std::function<bool(const DBMeta &)>) const;
     UIntMetaKey const &getKey(const DBMeta &child) const;
     EncLayer *getLayerBack() const;
     EncLayer *getLayer(const SECLEVEL &sl) const;
     bool hasEncLayer(const SECLEVEL &sl) const;
-    unsigned long getUniq() const { return uniq_count; }
+    unsigned long getUniq() const {return uniq_count;}
 
     // Need access to layers.
     friend class Analysis;
@@ -113,8 +114,7 @@ class TableMeta;
 //TODO: FieldMeta and TableMeta are partly duplicates with the original
 // FieldMetadata an TableMetadata
 // which contains data we want to add to this structure soon
-typedef class FieldMeta : public MappedDBMeta<OnionMeta, OnionMetaKey>
-{
+typedef class FieldMeta : public MappedDBMeta<OnionMeta, OnionMetaKey> {
 public:
     const std::string fname;
     const std::string salt_name;
@@ -127,13 +127,13 @@ public:
     // std::map <unsigned long long, std::vector<Salt>> salt_table;
 
     // New.
-    FieldMeta(const std::string &name, Create_field *const field,
-              const AES_KEY *const mKey, SECURITY_RATING sec_rating,
+    FieldMeta(const std::string &name, Create_field * const field,
+              const AES_KEY * const mKey, SECURITY_RATING sec_rating,
               unsigned long uniq_count);
     // Restore (WARN: Creates an incomplete type as it will not have it's
     // OnionMetas until they are added by the caller).
     static std::unique_ptr<FieldMeta>
-    deserialize(unsigned int id, const std::string &serial);
+        deserialize(unsigned int id, const std::string &serial);
     FieldMeta(unsigned int id, const std::string &fname, bool has_salt,
               const std::string &salt_name, onionlayout onion_layout,
               SECURITY_RATING sec_rating, unsigned long uniq_count,
@@ -144,29 +144,29 @@ public:
           sec_rating(sec_rating), uniq_count(uniq_count),
           counter(counter), has_default(has_default),
           default_value(default_value) {}
-    ~FieldMeta() { ; }
+    ~FieldMeta() {;}
 
     std::string serialize(const DBObject &parent) const;
     std::string stringify() const;
     std::vector<std::pair<const OnionMetaKey *, OnionMeta *>>
-    orderedOnionMetas() const;
+        orderedOnionMetas() const;
     std::string getSaltName() const;
-    unsigned long getUniq() const { return uniq_count; }
+    unsigned long getUniq() const {return uniq_count;}
 
     OnionMeta *getOnionMeta(onion o) const;
     // FIXME: Use rtti.
-    std::string typeName() const { return type_name; }
-    static std::string instanceTypeName() { return type_name; }
+    std::string typeName() const {return type_name;}
+    static std::string instanceTypeName() {return type_name;}
 
-    SECURITY_RATING getSecurityRating() const { return sec_rating; }
-    unsigned long leaseIncUniq() { return counter++; }
+    SECURITY_RATING getSecurityRating() const {return sec_rating;}
+    unsigned long leaseIncUniq() {return counter++;}
     // FIXME: Change name.
-    unsigned long getCurrentUniqCounter() const { return counter; }
+    unsigned long getCurrentUniqCounter() const {return counter;}
     bool hasOnion(onion o) const;
-    bool hasDefault() const { return has_default; }
-    std::string defaultValue() const { return default_value; }
-    const onionlayout &getOnionLayout() const { return onion_layout; }
-    bool getHasSalt() const { return has_salt; }
+    bool hasDefault() const {return has_default;}
+    std::string defaultValue() const {return default_value;}
+    const onionlayout &getOnionLayout() const {return onion_layout;}
+    bool getHasSalt() const {return has_salt;}
 
 private:
     constexpr static const char *type_name = "fieldMeta";
@@ -187,8 +187,7 @@ private:
                                              const Create_field *const cf);
 } FieldMeta;
 
-typedef class TableMeta : public MappedDBMeta<FieldMeta, IdentityMetaKey>
-{
+typedef class TableMeta : public MappedDBMeta<FieldMeta, IdentityMetaKey> {
 public:
     const bool hasSensitive;
     const bool has_salt;
@@ -203,24 +202,24 @@ public:
           counter(0) {}
     // Restore.
     static std::unique_ptr<TableMeta>
-    deserialize(unsigned int id, const std::string &serial);
+        deserialize(unsigned int id, const std::string &serial);
     TableMeta(unsigned int id, const std::string &anon_table_name,
               bool has_sensitive, bool has_salt,
               const std::string &salt_name, unsigned int counter)
         : MappedDBMeta(id), hasSensitive(has_sensitive),
           has_salt(has_salt), salt_name(salt_name),
           anon_table_name(anon_table_name), counter(counter) {}
-    ~TableMeta() { ; }
+    ~TableMeta() {;}
 
     std::string serialize(const DBObject &parent) const;
     std::string getAnonTableName() const;
     std::vector<FieldMeta *> orderedFieldMetas() const;
     std::vector<FieldMeta *> defaultedFieldMetas() const;
     // FIXME: Use rtti.
-    std::string typeName() const { return type_name; }
-    static std::string instanceTypeName() { return type_name; }
-    unsigned long leaseIncUniq() { return counter++; }
-    unsigned long getCurrentUniqCounter() { return counter; }
+    std::string typeName() const {return type_name;}
+    static std::string instanceTypeName() {return type_name;}
+    unsigned long leaseIncUniq() {return counter++;}
+    unsigned long getCurrentUniqCounter() {return counter;}
 
     friend class Analysis;
 
@@ -232,22 +231,21 @@ private:
                                  onion o) const;
 } TableMeta;
 
-class DatabaseMeta : public MappedDBMeta<TableMeta, IdentityMetaKey>
-{
+class DatabaseMeta : public MappedDBMeta<TableMeta, IdentityMetaKey> {
 public:
     // New DatabaseMeta.
     DatabaseMeta() : MappedDBMeta(0) {}
     // Restore.
     static std::unique_ptr<DatabaseMeta>
-    deserialize(unsigned int id, const std::string &serial);
+        deserialize(unsigned int id, const std::string &serial);
     DatabaseMeta(unsigned int id) : MappedDBMeta(id) {}
 
     ~DatabaseMeta() {}
 
     std::string serialize(const DBObject &parent) const;
     // FIXME: rtti
-    std::string typeName() const { return type_name; }
-    static std::string instanceTypeName() { return type_name; }
+    std::string typeName() const {return type_name;}
+    static std::string instanceTypeName() {return type_name;}
 
 private:
     constexpr static const char *type_name = "databaseMeta";
@@ -256,14 +254,13 @@ private:
 // AWARE: Table/Field aliases __WILL NOT__ be looked up when calling from
 // this level or below. Use Analysis::* if you need aliasing.
 typedef class SchemaInfo : public MappedDBMeta<DatabaseMeta,
-                                               IdentityMetaKey>
-{
+                                               IdentityMetaKey> {
 public:
     SchemaInfo() : MappedDBMeta(0) {}
     ~SchemaInfo() {}
 
-    std::string typeName() const { return type_name; }
-    static std::string instanceTypeName() { return type_name; }
+    std::string typeName() const {return type_name;}
+    static std::string instanceTypeName() {return type_name;}
 
 private:
     constexpr static const char *type_name = "schemaInfo";
@@ -274,186 +271,160 @@ private:
     }
 } SchemaInfo;
 
-typedef class VariableLocator
-{
+typedef class VariableLocator {
 public:
-    VariableLocator() = delete;
+	VariableLocator() = delete;
 
-    VariableLocator(const std::string &_db_name, const std::string &_table_name, const std::string &_field_name) : db_name(_db_name), table_name(_table_name), field_name(_field_name) {}
+	VariableLocator(const std::string &_db_name, const std::string &_table_name, const std::string &_field_name) :
+		db_name(_db_name), table_name(_table_name), field_name(_field_name) {}
 
-    std::string getDBName() const { return db_name; }
+	std::string getDBName() const {return db_name;}
 
-    std::string getTableName() const { return table_name; }
+	std::string getTableName() const {return table_name;}
 
-    std::string getFieldName() const { return field_name; }
+	std::string getFieldName() const {return field_name;}
 
 private:
-    const std::string db_name;
-    const std::string table_name;
-    const std::string field_name;
+	const std::string db_name;
+	const std::string table_name;
+	const std::string field_name;
 } VariableLocator;
 
-struct VLCmp
-{
-    bool operator()(const VariableLocator &lhs, const VariableLocator &rhs) const
-    {
-        if (lhs.getDBName() < rhs.getDBName())
-        {
-            return true;
-        }
-        else if (lhs.getTableName() < rhs.getTableName())
-        {
-            return true;
-        }
-        else if (lhs.getFieldName() < rhs.getFieldName())
-        {
-            return true;
-        }
-        else
-        {
-            return false;
-        }
-    }
+struct VLCmp {
+	bool operator() (const VariableLocator &lhs, const VariableLocator &rhs) const {
+		if (lhs.getDBName() < rhs.getDBName()) {
+			return true;
+		} else if (lhs.getTableName() < rhs.getTableName()) {
+			return true;
+		} else if (lhs.getFieldName() < rhs.getFieldName()) {
+			return true;
+		} else {
+			return false;
+		}
+	}
 };
 
 /*
  * FIXME: Maybe useless.
  */
 
-typedef class MyItem
-{
+typedef class MyItem {
 public:
-    MyItem() = delete;
+	MyItem() = delete;
 
-    MyItem(const std::string &db_name,
-           const std::string &table_name,
-           const std::string &field_name,
-           const double &val) : db_name(db_name), table_name(table_name), field_name(field_name), val(val)
-    {
-    }
+	MyItem(const std::string& db_name,
+			const std::string &table_name,
+	        const std::string &field_name,
+			const double& val) :
+				db_name(db_name), table_name(table_name), field_name(field_name), val(val)
+	{}
 
-    std::string getDBName() const { return db_name; }
+	std::string getDBName() const {return db_name;}
 
-    std::string getTableName() const { return table_name; }
+	std::string getTableName() const {return table_name;}
 
-    std::string getFieldName() const { return field_name; }
+	std::string getFieldName() const {return field_name;}
 
-    struct MyCompare
-    {
-        bool operator()(const MyItem &lhs, const MyItem &rhs) const
-        {
-            if (lhs.getDBName() < rhs.getDBName())
-            {
-                return true;
-            }
-            else if (lhs.getTableName() < rhs.getTableName())
-            {
-                return true;
-            }
-            else if (lhs.getFieldName() < rhs.getFieldName())
-            {
-                return true;
-            }
-            else
-            {
-                return lhs.getValue() < rhs.getValue();
-            }
-        }
-    };
 
-    double getValue() const { return val; }
+	struct MyCompare {
+		bool operator() (const MyItem& lhs, const MyItem& rhs) const {
+			if (lhs.getDBName() < rhs.getDBName()) {
+				return true;
+			} else if (lhs.getTableName() < rhs.getTableName()) {
+				return true;
+			} else if (lhs.getFieldName() < rhs.getFieldName()) {
+				return true;
+			} else {
+				return lhs.getValue() < rhs.getValue();
+			}
+		}
+	};
+
+	double getValue() const {return val;}
 
 private:
-    const std::string db_name;
-    const std::string table_name;
-    const std::string field_name;
-    const double val;
+	const std::string db_name;
+	const std::string table_name;
+	const std::string field_name;
+	const double val;
 } MyItem;
 
-typedef class Interval
-{
+typedef class Interval {
 public:
-    Interval() = delete;
+	Interval() = delete;
 
-    Interval(const double &left, const double &right,
-             const std::string &db_name, const std::string &table_name,
-             const std::string &field_name) : left(left), right(right), db_name(db_name),
-                                              table_name(table_name), field_name(field_name)
-    {
-    }
+	Interval(const double &left, const double &right,
+			const std::string &db_name, const std::string &table_name,
+			const std::string &field_name) :
+				left(left), right(right), db_name(db_name),
+				table_name(table_name), field_name(field_name)
+		{}
 
-    double getLeft() const { return left; }
+	double getLeft() const {return left;}
 
-    double getRight() const { return right; }
+	double getRight() const {return right;}
 
-    std::string getDBName() const { return db_name; }
+	std::string getDBName() const {return db_name;}
 
-    std::string getTableName() const { return table_name; }
+	std::string getTableName() const {return table_name;}
 
-    std::string getFieldName() const { return field_name; }
+	std::string getFieldName() const {return field_name;}
 
 private:
-    const double left;
-    const double right;
-    const std::string db_name;
-    const std::string table_name;
-    const std::string field_name;
+	const double left;
+	const double right;
+	const std::string db_name;
+	const std::string table_name;
+	const std::string field_name;
 
 } Interval;
 
-typedef struct UpdateOPE
-{
+typedef struct UpdateOPE {
 public:
-    UpdateOPE(const unsigned int &pos,
-              const std::string &ciphertext,
-              const std::string &table_name,
-              const std::string &encoding_column_name,
-              const std::string &ope_column_name,
-              const std::string &identifier)
-        : pos(pos), ciphertext("\"" + ciphertext + "\""), table_name("\'" + table_name + "\'"),
-          encoding_column_name("\'" + encoding_column_name + "\'"), ope_column_name("\'" + ope_column_name + "\'"),
-          identifier(identifier)
-    {
-    }
+	UpdateOPE(const unsigned int &pos,
+			const std::string &ciphertext,
+			const std::string &table_name,
+			const std::string &encoding_column_name,
+			const std::string &ope_column_name,
+			const std::string &identifier)
+	: pos(pos), ciphertext("\"" + ciphertext + "\""), table_name("\'" + table_name + "\'"),
+	  encoding_column_name("\'" + encoding_column_name + "\'"), ope_column_name("\'" + ope_column_name + "\'"),
+	  identifier(identifier)
+	{}
 
-    unsigned int pos;
-    std::string ciphertext;
-    std::string table_name;
-    std::string encoding_column_name; //ope_column_name + "_encoding".
-    std::string ope_column_name;
+	unsigned int pos;
+	std::string ciphertext;
+	std::string table_name;
+	std::string encoding_column_name; //ope_column_name + "_encoding".
+	std::string ope_column_name;
 
-    std::string identifier; // Seems like we cannot perform equality comparison between ciphertexts.?
+	std::string identifier; // Seems like we cannot perform equality comparison between ciphertexts.?
 } UpdateOPE;
 
-struct cmp
-{
-    bool operator()(const Interval &lhs, const Interval &rhs) const
-    {
-        if (lhs.getDBName() < rhs.getDBName())
-        {
-            return true;
-        }
-        else if (lhs.getTableName() < rhs.getTableName())
-        {
-            return true;
-        }
-        else if (lhs.getFieldName() < rhs.getFieldName())
-        {
-            return true;
-        }
+struct cmp {
+	bool operator () (const Interval &lhs, const Interval &rhs) const {
+		if (lhs.getDBName() < rhs.getDBName()) {
+			return true;
+		} else if (lhs.getTableName() < rhs.getTableName()) {
+			return true;
+		} else if (lhs.getFieldName() < rhs.getFieldName()) {
+			return true;
+		}
 
-        return lhs.getLeft() < rhs.getLeft() ||
-               (lhs.getLeft() == rhs.getLeft() && lhs.getRight() < rhs.getRight());
-    }
+		return lhs.getLeft() < rhs.getLeft() ||
+				(lhs.getLeft() == rhs.getLeft() && lhs.getRight() < rhs.getRight());
+	}
 };
 
-bool IsMySQLTypeNumeric(enum_field_types t);
+
+bool
+IsMySQLTypeNumeric(enum_field_types t);
 
 std::string
-call_pro_insert(const UpdateOPE &ope);
+call_pro_insert(const UpdateOPE & ope);
 
 std::ostream &
-operator<<(std::ostream &oss, const UpdateOPE &ope);
+operator << (std::ostream & oss, const UpdateOPE & ope);
 
 std::ostringstream &
-operator<<(std::ostringstream &oss, const UpdateOPE &ope);
+operator << (std::ostringstream &oss, const UpdateOPE &ope);

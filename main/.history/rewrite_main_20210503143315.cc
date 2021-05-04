@@ -34,6 +34,7 @@
 #include "parser/rapidjson/filewritestream.h"
 #include "parser/rapidjson/writer.h"
 
+
 #include "field.h"
 
 extern CItemTypesDir itemTypes;
@@ -41,7 +42,7 @@ extern CItemFuncDir funcTypes;
 extern CItemSumFuncDir sumFuncTypes;
 extern CItemFuncNameDir funcNames;
 
-#define ANON ANON_NAME(__anon_id_)
+#define ANON                ANON_NAME(__anon_id_)
 #define TYPE_LENGTH 4
 
 //TODO: use getAssert in more places
@@ -65,11 +66,10 @@ stringToItemField(const std::string &field,
 
 std::string global_crash_point = "";
 
-void crashTest(const std::string &current_point)
-{
-    if (current_point == global_crash_point)
-    {
-        throw std::runtime_error("crash test exception");
+void
+crashTest(const std::string &current_point) {
+    if (current_point == global_crash_point) {
+      throw std::runtime_error("crash test exception");
     }
 }
 
@@ -81,14 +81,14 @@ extract_fieldname(Item_field *const i)
     return fieldtemp.str();
 }
 
+
 //TODO: remove this at some point
 static inline void
 mysql_query_wrapper(MYSQL *const m, const std::string &q)
 {
-    if (mysql_query(m, q.c_str()))
-    {
+    if (mysql_query(m, q.c_str())) {
         cryptdb_err() << "query failed: " << q
-                      << " reason: " << mysql_error(m);
+                << " reason: " << mysql_error(m);
     }
 
     // HACK(stephentu):
@@ -96,30 +96,29 @@ mysql_query_wrapper(MYSQL *const m, const std::string &q)
     // on the current_thd. Thus, we must call create_embedded_thd
     // again.
     void *const ret = create_embedded_thd(0);
-    if (!ret)
-        assert(false);
+    if (!ret) assert(false);
 }
 
-bool sanityCheck(FieldMeta &fm)
+bool
+sanityCheck(FieldMeta &fm)
 {
-    //    for (auto it = fm.children.begin(); it != fm.children.end();
-    //         it++) {
-    //        OnionMeta *const om = (*it).second.get();
-    //        const onion o = (*it).first.getValue();
-    //        const std::vector<SECLEVEL> &secs = fm.getOnionLayout().at(o);
-    //        for (size_t i = 0; i < om->layers.size(); ++i) {
-    //            std::unique_ptr<EncLayer> const &layer = om->layers[i];
-    //            assert(layer->level() == secs[i]);
-    //        }
-    //    }
+//    for (auto it = fm.children.begin(); it != fm.children.end();
+//         it++) {
+//        OnionMeta *const om = (*it).second.get();
+//        const onion o = (*it).first.getValue();
+//        const std::vector<SECLEVEL> &secs = fm.getOnionLayout().at(o);
+//        for (size_t i = 0; i < om->layers.size(); ++i) {
+//            std::unique_ptr<EncLayer> const &layer = om->layers[i];
+//            assert(layer->level() == secs[i]);
+//        }
+//    }
     return true;
 }
 
 static bool
 sanityCheck(TableMeta &tm)
 {
-    for (auto it = tm.children.begin(); it != tm.children.end(); it++)
-    {
+    for (auto it = tm.children.begin(); it != tm.children.end(); it++) {
         const std::unique_ptr<FieldMeta> &fm = (*it).second;
         assert(sanityCheck(*fm.get()));
     }
@@ -129,8 +128,7 @@ sanityCheck(TableMeta &tm)
 static bool
 sanityCheck(DatabaseMeta &dm)
 {
-    for (auto it = dm.children.begin(); it != dm.children.end(); it++)
-    {
+    for (auto it = dm.children.begin(); it != dm.children.end(); it++) {
         const std::unique_ptr<TableMeta> &tm = (*it).second;
         assert(sanityCheck(*tm.get()));
     }
@@ -141,16 +139,14 @@ static bool
 sanityCheck(SchemaInfo &schema)
 {
     for (auto it = schema.children.begin(); it != schema.children.end();
-         it++)
-    {
+         it++) {
         const std::unique_ptr<DatabaseMeta> &tm = (*it).second;
         assert(sanityCheck(*tm.get()));
     }
     return true;
 }
 
-struct RecoveryDetails
-{
+struct RecoveryDetails {
     const bool embedded_begin;
     const bool embedded_complete;
     const bool existed_remote;
@@ -173,8 +169,7 @@ struct RecoveryDetails
 static bool
 false_if_false(bool test, const std::string &new_value)
 {
-    if (false == test)
-    {
+    if (false == test) {
         return test;
     }
 
@@ -195,7 +190,7 @@ collectRecoveryDetails(const std::unique_ptr<Connect> &conn,
     std::unique_ptr<DBResult> dbres;
     const std::string embedded_completion_q =
         " SELECT begin, complete, original_query, default_db FROM " +
-        embedded_completion_table +
+            embedded_completion_table +
         "  WHERE id = " + std::to_string(unfinished_id) + ";";
     RETURN_FALSE_IF_FALSE(e_conn->execute(embedded_completion_q, &dbres));
     assert(mysql_num_rows(dbres->n) == 1);
@@ -210,7 +205,7 @@ collectRecoveryDetails(const std::unique_ptr<Connect> &conn,
     const std::string remote_completion_q =
         " SELECT begin, complete FROM " + remote_completion_table +
         "  WHERE embedded_completion_id = " +
-        std::to_string(unfinished_id) + ";";
+                 std::to_string(unfinished_id) + ";";
     RETURN_FALSE_IF_FALSE(conn->execute(remote_completion_q, &dbres));
 
     const unsigned long remote_row_count = mysql_num_rows(dbres->n);
@@ -219,10 +214,9 @@ collectRecoveryDetails(const std::unique_ptr<Connect> &conn,
 
     std::string string_remote_begin, string_remote_complete;
     const bool existed_remote = !!remote_row;
-    if (existed_remote)
-    {
+    if (existed_remote) {
         const unsigned long *const l = mysql_fetch_lengths(dbres->n);
-        string_remote_begin = std::string(remote_row[0], l[0]);
+        string_remote_begin    = std::string(remote_row[0], l[0]);
         string_remote_complete = std::string(remote_row[1], l[1]);
         assert(string_to_bool(string_remote_begin) == true);
     }
@@ -257,8 +251,7 @@ abortQuery(const std::unique_ptr<Connect> &e_conn,
     const std::string update_aborted =
         " UPDATE " + embedded_completion_table +
         "    SET aborted = TRUE"
-        "  WHERE id = " +
-        std::to_string(unfinished_id) + ";";
+        "  WHERE id = " + std::to_string(unfinished_id) + ";";
 
     RETURN_FALSE_IF_FALSE(e_conn->execute("START TRANSACTION"));
     ROLLBACK_AND_RFIF(setBleedingTableToRegularTable(e_conn), e_conn);
@@ -278,8 +271,7 @@ finishQuery(const std::unique_ptr<Connect> &e_conn,
     const std::string update_completed =
         " UPDATE " + embedded_completion_table +
         "    SET complete = TRUE"
-        "  WHERE id = " +
-        std::to_string(unfinished_id) + ";";
+        "  WHERE id = " + std::to_string(unfinished_id) + ";";
 
     RETURN_FALSE_IF_FALSE(e_conn->execute("START TRANSACTION"));
     ROLLBACK_AND_RFIF(setRegularTableToBleedingTable(e_conn), e_conn);
@@ -303,9 +295,10 @@ fixAdjustOnion(const std::unique_ptr<Connect> &conn,
     lowLevelSetCurrentDatabase(e_conn, details->default_db);
 
     // failure after initial embedded queries and before remote queries
-    if (false == details->remote_begin)
-    {
-        assert(false == details->embedded_complete && false == details->existed_remote && false == details->remote_complete);
+    if (false == details->remote_begin) {
+        assert(false == details->embedded_complete
+               && false == details->existed_remote
+               && false == details->remote_complete);
         return abortQuery(e_conn, unfinished_id);
     }
 
@@ -328,13 +321,13 @@ static bool
 recoverableDeltaError(unsigned int err)
 {
     const bool ret =
-        ER_DB_CREATE_EXISTS == err ||     // Database already exists.
-        ER_TABLE_EXISTS_ERROR == err ||   // Table already exists.
-        ER_DUP_FIELDNAME == err ||        // Column already exists.
-        ER_DUP_KEYNAME == err ||          // Key already exists.
-        ER_DB_DROP_EXISTS == err ||       // Database doesn't exist.
-        ER_BAD_TABLE_ERROR == err ||      // Table doesn't exist.
-        ER_CANT_DROP_FIELD_OR_KEY == err; // Key/Col doesn't exist.
+        ER_DB_CREATE_EXISTS == err ||       // Database already exists.
+        ER_TABLE_EXISTS_ERROR == err ||     // Table already exists.
+        ER_DUP_FIELDNAME == err ||          // Column already exists.
+        ER_DUP_KEYNAME == err ||            // Key already exists.
+        ER_DB_DROP_EXISTS == err ||         // Database doesn't exist.
+        ER_BAD_TABLE_ERROR == err ||        // Table doesn't exist.
+        ER_CANT_DROP_FIELD_OR_KEY == err;   // Key/Col doesn't exist.
 
     return ret;
 }
@@ -360,9 +353,9 @@ static bool
 queryInitiallyFailedErrors(unsigned int err)
 {
     // lifted from mysql-src/includes/errmsg.h
-    unsigned long cr_unknown_error = 2000,
-                  cr_server_gone_error = 2006,
-                  cr_server_lost = 2013,
+    unsigned long cr_unknown_error        = 2000,
+                  cr_server_gone_error    = 2006,
+                  cr_server_lost          = 2013,
                   cr_commands_out_of_sync = 2014;
 
     const bool ret =
@@ -385,13 +378,11 @@ retryQuery(const std::unique_ptr<Connect> &c, const std::string &query,
 
     *bad_query = false;
 
-    if (false == c->execute(query))
-    {
+    if (false == c->execute(query)) {
         const unsigned int err = c->get_mysql_errno();
         // if the error is not recoverable, we must determine if
         // the query failed initially for the same error.
-        if (false == recoverableDeltaError(err))
-        {
+        if (false == recoverableDeltaError(err)) {
             *bad_query = queryInitiallyFailedErrors(err);
             RETURN_FALSE_IF_FALSE(*bad_query);
 
@@ -416,15 +407,17 @@ fixDDL(const std::unique_ptr<Connect> &conn,
     RETURN_FALSE_IF_FALSE(collectRecoveryDetails(conn, e_conn,
                                                  unfinished_id,
                                                  &details));
-    assert(true == details->embedded_begin && false == details->embedded_complete);
+    assert(true == details->embedded_begin
+           && false == details->embedded_complete);
 
     lowLevelSetCurrentDatabase(e_conn, details->default_db);
     lowLevelSetCurrentDatabase(conn, details->default_db);
 
     // failure after initial embedded queries and before remote queries
-    if (false == details->remote_begin)
-    {
-        assert(false == details->embedded_complete && false == details->existed_remote && false == details->remote_complete);
+    if (false == details->remote_begin) {
+        assert(false == details->embedded_complete
+               && false == details->existed_remote
+               && false == details->remote_complete);
         return abortQuery(e_conn, unfinished_id);
     }
 
@@ -437,8 +430,7 @@ fixDDL(const std::unique_ptr<Connect> &conn,
     // ugly sanity checking device
     AssignOnce<bool> remote_bad_query;
     // failure before remote queries complete
-    if (false == details->remote_complete)
-    {
+    if (false == details->remote_complete) {
         bool rbq;
         // reissue the DDL query against the remote database.
         RETURN_FALSE_IF_FALSE(retryQuery(conn, details->query,
@@ -449,7 +441,7 @@ fixDDL(const std::unique_ptr<Connect> &conn,
             "UPDATE " + remote_completion_table +
             "   SET complete = TRUE"
             " WHERE embedded_completion_id = " +
-            std::to_string(unfinished_id) + ";";
+                    std::to_string(unfinished_id) + ";";
         RETURN_FALSE_IF_FALSE(conn->execute(update_remote_complete));
     }
 
@@ -461,10 +453,10 @@ fixDDL(const std::unique_ptr<Connect> &conn,
         bool embedded_bad_query;
         RETURN_FALSE_IF_FALSE(retryQuery(e_conn, details->query,
                                          &embedded_bad_query));
-        assert(false == remote_bad_query.assigned() || embedded_bad_query == remote_bad_query.get());
+        assert(false == remote_bad_query.assigned()
+               || embedded_bad_query == remote_bad_query.get());
 
-        if (true == embedded_bad_query)
-        {
+        if (true == embedded_bad_query) {
             return abortQuery(e_conn, unfinished_id);
         }
 
@@ -488,12 +480,9 @@ deltaSanityCheck(const std::unique_ptr<Connect> &conn,
     std::cerr << GREEN_BEGIN << "there are " << unfinished_count
               << " unfinished deltas" << COLOR_END << std::endl;
 
-    if (0 == unfinished_count)
-    {
+    if (0 == unfinished_count) {
         return true;
-    }
-    else if (1 < unfinished_count)
-    {
+    } else if (1 < unfinished_count) {
         return false;
     }
 
@@ -507,15 +496,14 @@ deltaSanityCheck(const std::unique_ptr<Connect> &conn,
     const CompletionType type =
         TypeText<CompletionType>::toType(string_unfinished_type);
 
-    switch (type)
-    {
-    case CompletionType::AdjustOnionCompletion:
-        return fixAdjustOnion(conn, e_conn, unfinished_id);
-    case CompletionType::DDLCompletion:
-        return fixDDL(conn, e_conn, unfinished_id);
-    default:
-        std::cerr << "unknown completion type" << std::endl;
-        return false;
+    switch (type) {
+        case CompletionType::AdjustOnionCompletion:
+            return fixAdjustOnion(conn, e_conn, unfinished_id);
+        case CompletionType::DDLCompletion:
+            return fixDDL(conn, e_conn, unfinished_id);
+        default:
+            std::cerr << "unknown completion type" << std::endl;
+            return false;
     }
 }
 
@@ -537,12 +525,11 @@ loadSchemaInfo(const std::unique_ptr<Connect> &conn,
     std::function<DBMeta *(DBMeta *const)> loadChildren =
         [&loadChildren, &e_conn](DBMeta *const parent) {
             auto kids = parent->fetchChildren(e_conn);
-            for (auto it : kids)
-            {
+            for (auto it : kids) {
                 loadChildren(it);
             }
 
-            return parent; /* lambda */
+            return parent;  /* lambda */
         };
 
     loadChildren(schema);
@@ -553,8 +540,7 @@ loadSchemaInfo(const std::unique_ptr<Connect> &conn,
     return schema;
 }
 
-template <typename Type>
-static void
+template <typename Type> static void
 translatorHelper(std::vector<std::string> texts,
                  std::vector<Type> enums)
 {
@@ -565,59 +551,35 @@ static bool
 buildTypeTextTranslator()
 {
     // Onions.
-    const std::vector<std::string> onion_strings{
-        "oINVALID",
-        "oPLAIN",
-        "oDET",
-        "oOPE",
-        "oAGG",
-        "oSWP",
-        "oFHDET",
-        "oFHOPE",
+    const std::vector<std::string> onion_strings
+    {
+        "oINVALID", "oPLAIN", "oDET", "oOPE", "oAGG", "oSWP", "oFHDET", "oFHOPE",
     };
-    const std::vector<onion> onions{
-        oINVALID,
-        oPLAIN,
-        oDET,
-        oOPE,
-        oAGG,
-        oSWP,
-        oFHDET,
-        oFHOPE,
+    const std::vector<onion> onions
+    {
+        oINVALID, oPLAIN, oDET, oOPE, oAGG, oSWP, oFHDET, oFHOPE,
     };
     RETURN_FALSE_IF_FALSE(onion_strings.size() == onions.size());
     translatorHelper<onion>(onion_strings, onions);
 
     // SecLevels.
-    const std::vector<std::string> seclevel_strings{
-        "RND",
-        "DET",
-        "DETJOIN",
-        "OPE",
-        "HOM",
-        "SEARCH",
-        "PLAINVAL",
-        "INVALID",
-        "FHDET",
-        "FHOPE",
+    const std::vector<std::string> seclevel_strings
+    {
+        "RND", "DET", "DETJOIN", "OPE", "HOM", "SEARCH", "PLAINVAL",
+        "INVALID", "FHDET", "FHOPE",
     };
-    const std::vector<SECLEVEL> seclevels{
-        SECLEVEL::RND,
-        SECLEVEL::DET,
-        SECLEVEL::DETJOIN,
-        SECLEVEL::OPE,
-        SECLEVEL::HOM,
-        SECLEVEL::SEARCH,
-        SECLEVEL::PLAINVAL,
-        SECLEVEL::INVALID,
-        SECLEVEL::FHDET,
-        SECLEVEL::FHOPE,
+    const std::vector<SECLEVEL> seclevels
+    {
+        SECLEVEL::RND, SECLEVEL::DET, SECLEVEL::DETJOIN, SECLEVEL::OPE,
+        SECLEVEL::HOM, SECLEVEL::SEARCH, SECLEVEL::PLAINVAL,
+        SECLEVEL::INVALID, SECLEVEL::FHDET, SECLEVEL::FHOPE,
     };
     RETURN_FALSE_IF_FALSE(seclevel_strings.size() == seclevels.size());
     translatorHelper(seclevel_strings, seclevels);
 
     // MYSQL types.
-    const std::vector<std::string> mysql_type_strings{
+    const std::vector<std::string> mysql_type_strings
+    {
         "MYSQL_TYPE_DECIMAL", "MYSQL_TYPE_TINY", "MYSQL_TYPE_SHORT",
         "MYSQL_TYPE_LONG", "MYSQL_TYPE_FLOAT", "MYSQL_TYPE_DOUBLE",
         "MYSQL_TYPE_NULL", "MYSQL_TYPE_TIMESTAMP", "MYSQL_TYPE_LONGLONG",
@@ -628,8 +590,10 @@ buildTypeTextTranslator()
         "MYSQL_TYPE_TINY_BLOB", "MYSQL_TYPE_MEDIUM_BLOB",
         "MYSQL_TYPE_LONG_BLOB", "MYSQL_TYPE_BLOB",
         "MYSQL_TYPE_VAR_STRING", "MYSQL_TYPE_STRING",
-        "MYSQL_TYPE_GEOMETRY"};
-    const std::vector<enum enum_field_types> mysql_types{
+        "MYSQL_TYPE_GEOMETRY"
+    };
+    const std::vector<enum enum_field_types> mysql_types
+    {
         MYSQL_TYPE_DECIMAL, MYSQL_TYPE_TINY, MYSQL_TYPE_SHORT,
         MYSQL_TYPE_LONG, MYSQL_TYPE_FLOAT, MYSQL_TYPE_DOUBLE,
         MYSQL_TYPE_NULL, MYSQL_TYPE_TIMESTAMP, MYSQL_TYPE_LONGLONG,
@@ -644,11 +608,12 @@ buildTypeTextTranslator()
         MYSQL_TYPE_GEOMETRY /* 255 */
     };
     RETURN_FALSE_IF_FALSE(mysql_type_strings.size() ==
-                          mysql_types.size());
+                            mysql_types.size());
     translatorHelper(mysql_type_strings, mysql_types);
 
     // MYSQL item types.
-    const std::vector<std::string> mysql_item_strings{
+    const std::vector<std::string> mysql_item_strings
+    {
         "FIELD_ITEM", "FUNC_ITEM", "SUM_FUNC_ITEM", "STRING_ITEM",
         "INT_ITEM", "REAL_ITEM", "NULL_ITEM", "VARBIN_ITEM",
         "COPY_STR_ITEM", "FIELD_AVG_ITEM", "DEFAULT_VALUE_ITEM",
@@ -656,8 +621,10 @@ buildTypeTextTranslator()
         "FIELD_VARIANCE_ITEM", "INSERT_VALUE_ITEM",
         "SUBSELECT_ITEM", "ROW_ITEM", "CACHE_ITEM", "TYPE_HOLDER",
         "PARAM_ITEM", "TRIGGER_FIELD_ITEM", "DECIMAL_ITEM",
-        "XPATH_NODESET", "XPATH_NODESET_CMP", "VIEW_FIXER_ITEM"};
-    const std::vector<enum Item::Type> mysql_item_types{
+        "XPATH_NODESET", "XPATH_NODESET_CMP", "VIEW_FIXER_ITEM"
+    };
+    const std::vector<enum Item::Type> mysql_item_types
+    {
         Item::Type::FIELD_ITEM, Item::Type::FUNC_ITEM,
         Item::Type::SUM_FUNC_ITEM, Item::Type::STRING_ITEM,
         Item::Type::INT_ITEM, Item::Type::REAL_ITEM,
@@ -671,76 +638,89 @@ buildTypeTextTranslator()
         Item::Type::TYPE_HOLDER, Item::Type::PARAM_ITEM,
         Item::Type::TRIGGER_FIELD_ITEM, Item::Type::DECIMAL_ITEM,
         Item::Type::XPATH_NODESET, Item::Type::XPATH_NODESET_CMP,
-        Item::Type::VIEW_FIXER_ITEM};
+        Item::Type::VIEW_FIXER_ITEM
+    };
     RETURN_FALSE_IF_FALSE(mysql_item_strings.size() ==
-                          mysql_item_types.size());
+                            mysql_item_types.size());
     translatorHelper(mysql_item_strings, mysql_item_types);
 
     // ALTER TABLE [table] DISABLE/ENABLE KEYS
-    const std::vector<std::string> disable_enable_keys_strings{
-        "DISABLE", "ENABLE", "LEAVE_AS_IS"};
+    const std::vector<std::string> disable_enable_keys_strings
+    {
+        "DISABLE", "ENABLE", "LEAVE_AS_IS"
+    };
     const std::vector<enum enum_enable_or_disable>
-        disable_enable_keys_types{
-            DISABLE, ENABLE, LEAVE_AS_IS};
+        disable_enable_keys_types
+    {
+        DISABLE, ENABLE, LEAVE_AS_IS
+    };
     RETURN_FALSE_IF_FALSE(disable_enable_keys_strings.size() ==
-                          disable_enable_keys_types.size());
+                            disable_enable_keys_types.size());
     translatorHelper(disable_enable_keys_strings,
                      disable_enable_keys_types);
 
     // Onion Layouts.
-    const std::vector<std::string> onion_layout_strings{
-        "PLAIN_ONION_LAYOUT",
-        "NUM_ONION_LAYOUT",
-        "BEST_EFFORT_NUM_ONION_LAYOUT",
-        "STR_ONION_LAYOUT",
-        "BEST_EFFORT_STR_ONION_LAYOUT",
-        "FH_NUM_ONION_LAYOUT",
-        "FH_STR_ONION_LAYOUT",
-
+    const std::vector<std::string> onion_layout_strings
+    {
+        "PLAIN_ONION_LAYOUT", "NUM_ONION_LAYOUT",
+        "BEST_EFFORT_NUM_ONION_LAYOUT", "STR_ONION_LAYOUT",
+        "BEST_EFFORT_STR_ONION_LAYOUT", "FH_NUM_ONION_LAYOUT", "FH_STR_ONION_LAYOUT",
+        
     };
-    const std::vector<onionlayout> onion_layouts{
-        PLAIN_ONION_LAYOUT,
-        NUM_ONION_LAYOUT,
-        BEST_EFFORT_NUM_ONION_LAYOUT,
-        STR_ONION_LAYOUT,
-        BEST_EFFORT_STR_ONION_LAYOUT,
-        FH_NUM_ONION_LAYOUT,
-        FH_STR_ONION_LAYOUT,
+    const std::vector<onionlayout> onion_layouts
+    {
+        PLAIN_ONION_LAYOUT, NUM_ONION_LAYOUT,
+        BEST_EFFORT_NUM_ONION_LAYOUT, STR_ONION_LAYOUT,
+        BEST_EFFORT_STR_ONION_LAYOUT, FH_NUM_ONION_LAYOUT, FH_STR_ONION_LAYOUT,
     };
     RETURN_FALSE_IF_FALSE(onion_layout_strings.size() ==
-                          onion_layouts.size());
+                            onion_layouts.size());
     translatorHelper(onion_layout_strings, onion_layouts);
 
     // Geometry type.
-    const std::vector<std::string> geometry_type_strings{
+    const std::vector<std::string> geometry_type_strings
+    {
         "GEOM_GEOMETRY", "GEOM_POINT", "GEOM_LINESTRING", "GEOM_POLYGON",
         "GEOM_MULTIPOINT", "GEOM_MULTILINESTRING", "GEOM_MULTIPOLYGON",
-        "GEOM_GEOMETRYCOLLECTION"};
-    std::vector<Field::geometry_type> geometry_types{
+        "GEOM_GEOMETRYCOLLECTION"
+    };
+    std::vector<Field::geometry_type> geometry_types
+    {
         Field::GEOM_GEOMETRY, Field::GEOM_POINT, Field::GEOM_LINESTRING,
         Field::GEOM_POLYGON, Field::GEOM_MULTIPOINT,
         Field::GEOM_MULTILINESTRING, Field::GEOM_MULTIPOLYGON,
-        Field::GEOM_GEOMETRYCOLLECTION};
+        Field::GEOM_GEOMETRYCOLLECTION
+    };
     RETURN_FALSE_IF_FALSE(geometry_type_strings.size() ==
-                          geometry_types.size());
+                            geometry_types.size());
     translatorHelper(geometry_type_strings, geometry_types);
 
     // Security Rating.
-    const std::vector<std::string> security_rating_strings{
-        "SENSITIVE", "BEST_EFFORT", "PLAIN"};
-    const std::vector<SECURITY_RATING> security_rating_types{
+    const std::vector<std::string> security_rating_strings
+    {
+        "SENSITIVE", "BEST_EFFORT", "PLAIN"
+    };
+    const std::vector<SECURITY_RATING> security_rating_types
+    {
         SECURITY_RATING::SENSITIVE, SECURITY_RATING::BEST_EFFORT,
-        SECURITY_RATING::PLAIN};
-    RETURN_FALSE_IF_FALSE(security_rating_strings.size() == security_rating_types.size());
+        SECURITY_RATING::PLAIN
+    };
+    RETURN_FALSE_IF_FALSE(security_rating_strings.size()
+                            == security_rating_types.size());
     translatorHelper(security_rating_strings, security_rating_types);
 
     // Query Completions.
-    const std::vector<std::string> completion_strings{
-        "DDLCompletion", "AdjustOnionCompletion"};
-    const std::vector<CompletionType> completion_types{
+    const std::vector<std::string> completion_strings
+    {
+        "DDLCompletion", "AdjustOnionCompletion"
+    };
+    const std::vector<CompletionType> completion_types
+    {
         CompletionType::DDLCompletion,
-        CompletionType::AdjustOnionCompletion};
-    RETURN_FALSE_IF_FALSE(completion_strings.size() == completion_types.size());
+        CompletionType::AdjustOnionCompletion
+    };
+    RETURN_FALSE_IF_FALSE(completion_strings.size()
+                            == completion_types.size());
     translatorHelper(completion_strings, completion_types);
 
     return true;
@@ -763,15 +743,15 @@ removeOnionLayer(const Analysis &a, const TableMeta &tm,
                  const FieldMeta &fm,
                  OnionMetaAdjustor *const om_adjustor,
                  SECLEVEL *const new_level,
-                 std::vector<std::unique_ptr<Delta>> *const deltas)
+                 std::vector<std::unique_ptr<Delta> > *const deltas)
 {
     // Remove the EncLayer.
     EncLayer const &back_el = om_adjustor->popBackEncLayer();
 
     // Update the Meta.
     deltas->push_back(std::unique_ptr<Delta>(
-        new DeleteDelta(back_el,
-                        om_adjustor->getOnionMeta())));
+                        new DeleteDelta(back_el,
+                                        om_adjustor->getOnionMeta())));
     const SECLEVEL local_new_level = om_adjustor->getSecLevel();
 
     //removes onion layer at the DB
@@ -790,16 +770,14 @@ removeOnionLayer(const Analysis &a, const TableMeta &tm,
 
     std::stringstream query;
     query << " UPDATE " << dbname << "." << anon_table_name
-          << "    SET " << fieldanon << " = " << *decUDF
+          << "    SET " << fieldanon  << " = " << *decUDF
           << ";";
 
-    std::cerr << "\nADJUST: \n"
-              << query.str() << std::endl;
+    std::cerr << "\nADJUST: \n" << query.str() << std::endl;
 
     //execute decryption query
 
-    LOG(cdb_v) << "adjust onions: \n"
-               << query.str() << std::endl;
+    LOG(cdb_v) << "adjust onions: \n" << query.str() << std::endl;
 
     *new_level = local_new_level;
     return query.str();
@@ -814,7 +792,7 @@ removeOnionLayer(const Analysis &a, const TableMeta &tm,
  * changed schema to persistent storage.
  *
  */
-static std::pair<std::vector<std::unique_ptr<Delta>>,
+static std::pair<std::vector<std::unique_ptr<Delta> >,
                  std::list<std::string>>
 adjustOnion(const Analysis &a, onion o, const TableMeta &tm,
             const FieldMeta &fm, SECLEVEL tolevel)
@@ -826,9 +804,8 @@ adjustOnion(const Analysis &a, onion o, const TableMeta &tm,
     assert(newlevel != SECLEVEL::INVALID);
 
     std::list<std::string> adjust_queries;
-    std::vector<std::unique_ptr<Delta>> deltas;
-    while (newlevel > tolevel)
-    {
+    std::vector<std::unique_ptr<Delta> > deltas;
+    while (newlevel > tolevel) {
         auto query =
             removeOnionLayer(a, tm, fm, &om_adjustor, &newlevel,
                              &deltas);
@@ -849,8 +826,7 @@ FieldQualifies(const FieldMeta *const restriction,
 
 template <class T>
 static Item *
-do_optimize_const_item(T *i, Analysis &a)
-{
+do_optimize_const_item(T *i, Analysis &a) {
 
     return i;
 
@@ -951,23 +927,20 @@ decrypt_item_layers(Item *const i, const FieldMeta *const fm, onion o,
     const OnionMeta *const om = fm->getOnionMeta(o);
     assert(om);
     const auto &enc_layers = om->layers;
-    for (auto it = enc_layers.rbegin(); it != enc_layers.rend(); ++it)
-    {
-        if (needFrequencySmoothing(fm->fname))
-        {
-            // TODO: EXTRACT.
-            dec = (*it)->decrypt(dec, extractSaltLengthFromField(fm->fname));
-        }
-        else
-        {
-            dec = (*it)->decrypt(dec, IV);
-        }
+    for (auto it = enc_layers.rbegin(); it != enc_layers.rend(); ++it) {
+    	if (needFrequencySmoothing(fm->fname)) {
+    		// TODO: EXTRACT.
+    		dec = (*it)->decrypt(dec, extractSaltLengthFromField(fm->fname));
+    	} else {
+    		dec = (*it)->decrypt(dec, IV);
+    	}
 
         LOG(cdb_v) << "dec okay";
     }
 
     return dec;
 }
+
 
 // returns the intersection of the es and fm.encdesc
 // by also taking into account what onions are stale
@@ -991,22 +964,22 @@ intersect(const EncSet & es, FieldMeta * fm) {
 /*
  * Actual item handlers.
  */
-static void optimize_select_lex(st_select_lex *select_lex, Analysis &a);
+static void optimize_select_lex(st_select_lex *select_lex, Analysis & a);
 
 static Item *getLeftExpr(const Item_in_subselect &i)
 {
     Item *const left_expr =
-        i.*rob<Item_in_subselect, Item *,
-               &Item_in_subselect::left_expr>::ptr();
+        i.*rob<Item_in_subselect, Item*,
+                &Item_in_subselect::left_expr>::ptr();
     assert(left_expr);
 
     return left_expr;
+
 }
 
 // HACK: Forces query down to PLAINVAL.
 static class ANON : public CItemSubtypeIT<Item_subselect,
-                                          Item::Type::SUBSELECT_ITEM>
-{
+                                          Item::Type::SUBSELECT_ITEM> {
     virtual RewritePlan *
     do_gather_type(const Item_subselect &i, Analysis &a) const
     {
@@ -1024,11 +997,9 @@ static class ANON : public CItemSubtypeIT<Item_subselect,
         // projections.
         auto item_it =
             RiboldMYSQL::constList_iterator<Item>(select_lex->item_list);
-        for (;;)
-        {
+        for (;;) {
             const Item *const item = item_it++;
-            if (!item)
-            {
+            if (!item) {
                 break;
             }
 
@@ -1036,43 +1007,40 @@ static class ANON : public CItemSubtypeIT<Item_subselect,
                 subquery_analysis->rewritePlans[item];
             TEST_NoAvailableEncSet(item_rp->es_out, i.type(),
                                    PLAIN_EncSet, why,
-                                   std::vector<std::shared_ptr<RewritePlan>>());
+                            std::vector<std::shared_ptr<RewritePlan> >());
             item_rp->es_out = PLAIN_EncSet;
         }
 
         const EncSet out_es = PLAIN_EncSet;
         const reason rsn = reason(out_es, why, i);
 
-        switch (RiboldMYSQL::substype(i))
-        {
-        case Item_subselect::subs_type::SINGLEROW_SUBS:
-            break;
-        case Item_subselect::subs_type::EXISTS_SUBS:
-            assert(false);
-        case Item_subselect::subs_type::IN_SUBS:
-        {
-            const Item *const left_expr =
-                getLeftExpr(static_cast<const Item_in_subselect &>(i));
-            RewritePlan *const rp_left_expr =
-                gather(*left_expr, *subquery_analysis.get());
-            a.rewritePlans[left_expr] =
-                std::unique_ptr<RewritePlan>(rp_left_expr);
-            break;
-        }
-        case Item_subselect::subs_type::ALL_SUBS:
-            assert(false);
-        case Item_subselect::subs_type::ANY_SUBS:
-            assert(false);
-        default:
-            FAIL_TextMessageError("Unknown subquery type!");
+        switch (RiboldMYSQL::substype(i)) {
+            case Item_subselect::subs_type::SINGLEROW_SUBS:
+                break;
+            case Item_subselect::subs_type::EXISTS_SUBS:
+                assert(false);
+            case Item_subselect::subs_type::IN_SUBS: {
+                const Item *const left_expr =
+                    getLeftExpr(static_cast<const Item_in_subselect &>(i));
+                RewritePlan *const rp_left_expr =
+                    gather(*left_expr, *subquery_analysis.get());
+                a.rewritePlans[left_expr] =
+                    std::unique_ptr<RewritePlan>(rp_left_expr);
+                break;
+            }
+            case Item_subselect::subs_type::ALL_SUBS:
+                assert(false);
+            case Item_subselect::subs_type::ANY_SUBS:
+                assert(false);
+            default:
+                FAIL_TextMessageError("Unknown subquery type!");
         }
 
         return new RewritePlanWithAnalysis(out_es, rsn,
                                            std::move(subquery_analysis));
     }
 
-    virtual Item *do_optimize_type(Item_subselect *i, Analysis &a) const
-    {
+    virtual Item * do_optimize_type(Item_subselect *i, Analysis & a) const {
         optimize_select_lex(i->get_select_lex(), a);
         return i;
     }
@@ -1113,38 +1081,35 @@ static class ANON : public CItemSubtypeIT<Item_subselect,
         //   Specific Subquery Rewrite
         // ------------------------------
         {
-            switch (RiboldMYSQL::substype(i))
-            {
-            case Item_subselect::subs_type::SINGLEROW_SUBS:
-                return new Item_singlerow_subselect(new_select_lex);
-            case Item_subselect::subs_type::EXISTS_SUBS:
-                assert(false);
-            case Item_subselect::subs_type::IN_SUBS:
-            {
-                const Item *const left_expr =
-                    getLeftExpr(static_cast<const Item_in_subselect &>(i));
-                const std::unique_ptr<RewritePlan> &rp_left_expr =
-                    constGetAssert(a.rewritePlans, left_expr);
-                Item *const new_left_expr =
-                    itemTypes.do_rewrite(*left_expr, constr,
-                                         *rp_left_expr.get(), a);
-                return new Item_in_subselect(new_left_expr,
-                                             new_select_lex);
-            }
-            case Item_subselect::subs_type::ALL_SUBS:
-                assert(false);
-            case Item_subselect::subs_type::ANY_SUBS:
-                assert(false);
-            default:
-                FAIL_TextMessageError("Unknown subquery type!");
+            switch (RiboldMYSQL::substype(i)) {
+                case Item_subselect::subs_type::SINGLEROW_SUBS:
+                    return new Item_singlerow_subselect(new_select_lex);
+                case Item_subselect::subs_type::EXISTS_SUBS:
+                    assert(false);
+                case Item_subselect::subs_type::IN_SUBS: {
+                    const Item *const left_expr =
+                        getLeftExpr(static_cast<const Item_in_subselect &>(i));
+                    const std::unique_ptr<RewritePlan> &rp_left_expr =
+                        constGetAssert(a.rewritePlans, left_expr);
+                    Item *const new_left_expr =
+                        itemTypes.do_rewrite(*left_expr, constr,
+                                             *rp_left_expr.get(), a);
+                    return new Item_in_subselect(new_left_expr,
+                                                 new_select_lex);
+                }
+                case Item_subselect::subs_type::ALL_SUBS:
+                    assert(false);
+                case Item_subselect::subs_type::ANY_SUBS:
+                    assert(false);
+                default:
+                    FAIL_TextMessageError("Unknown subquery type!");
             }
         }
     }
 } ANON;
 
 // NOTE: Shouldn't be needed unless we allow mysql to rewrite subqueries.
-static class ANON : public CItemSubtypeIT<Item_cache, Item::Type::CACHE_ITEM>
-{
+static class ANON : public CItemSubtypeIT<Item_cache, Item::Type::CACHE_ITEM> {
     virtual RewritePlan *do_gather_type(const Item_cache &i,
                                         Analysis &a) const
     {
@@ -1185,7 +1150,7 @@ static class ANON : public CItemSubtypeIT<Item_cache, Item::Type::CACHE_ITEM>
         */
     }
 
-    virtual Item *do_optimize_type(Item_cache *i, Analysis &a) const
+    virtual Item * do_optimize_type(Item_cache *i, Analysis & a) const
     {
         // TODO(stephentu): figure out how to use rob here
         return i;
@@ -1205,11 +1170,10 @@ static class ANON : public CItemSubtypeIT<Item_cache, Item::Type::CACHE_ITEM>
  */
 
 static void
-optimize_select_lex(st_select_lex *select_lex, Analysis &a)
+optimize_select_lex(st_select_lex *select_lex, Analysis & a)
 {
     auto item_it = List_iterator<Item>(select_lex->item_list);
-    for (;;)
-    {
+    for (;;) {
         if (!item_it++)
             break;
         optimize(item_it.ref(), a);
@@ -1236,14 +1200,12 @@ static void
 optimize_table_list(List<TABLE_LIST> *tll, Analysis &a)
 {
     List_iterator<TABLE_LIST> join_it(*tll);
-    for (;;)
-    {
+    for (;;) {
         TABLE_LIST *t = join_it++;
         if (!t)
             break;
 
-        if (t->nested_join)
-        {
+        if (t->nested_join) {
             optimize_table_list(&t->nested_join->join_list, a);
             return;
         }
@@ -1251,8 +1213,7 @@ optimize_table_list(List<TABLE_LIST> *tll, Analysis &a)
         if (t->on_expr)
             optimize(&t->on_expr, a);
 
-        if (t->derived)
-        {
+        if (t->derived) {
             st_select_lex_unit *u = t->derived;
             optimize_select_lex(u->first_select(), a);
         }
@@ -1260,10 +1221,8 @@ optimize_table_list(List<TABLE_LIST> *tll, Analysis &a)
 }
 
 static bool
-noRewrite(const LEX &lex)
-{
-    switch (lex.sql_command)
-    {
+noRewrite(const LEX &lex) {
+    switch (lex.sql_command) {
     case SQLCOM_SHOW_DATABASES:
     case SQLCOM_SET_OPTION:
     case SQLCOM_BEGIN:
@@ -1273,8 +1232,8 @@ noRewrite(const LEX &lex)
     case SQLCOM_SHOW_VARIABLES:
     case SQLCOM_UNLOCK_TABLES:
         return true;
-    case SQLCOM_SELECT:
-    {
+    case SQLCOM_SELECT: {
+
     }
     default:
         return false;
@@ -1284,19 +1243,17 @@ noRewrite(const LEX &lex)
 }
 
 static bool
-noWhere(const LEX &lex)
-{
-    switch (lex.sql_command)
-    {
-    case SQLCOM_SELECT:
-    case SQLCOM_DELETE:
-    case SQLCOM_UPDATE:
-    case SQLCOM_INSERT_SELECT:
-        return false;
-    default:
-        return true;
-    }
-    return true;
+noWhere (const LEX &lex) {
+	switch(lex.sql_command) {
+	case SQLCOM_SELECT:
+	case SQLCOM_DELETE:
+	case SQLCOM_UPDATE:
+	case SQLCOM_INSERT_SELECT:
+		return false;
+	default:
+		return true;
+	}
+	return true;
 }
 
 static std::string
@@ -1319,16 +1276,12 @@ Rewriter::dispatchOnLex(Analysis &a, ProxyState &ps,
                         const std::string &query)
 {
     std::unique_ptr<query_parse> p;
-    try
-    {
+    try {
         p = std::unique_ptr<query_parse>(
-            new query_parse(a.getDatabaseName(), query));
-    }
-    catch (std::runtime_error &e)
-    {
+                new query_parse(a.getDatabaseName(), query));
+    } catch (std::runtime_error &e) {
         FAIL_TextMessageError("Bad Query: [" + query + "]\t"
-                                                       "Error Data: " +
-                              e.what());
+                              "Error Data: " + e.what());
     }
 
     // TODO: transform where clause according to the column and the salt count. Should note
@@ -1346,36 +1299,31 @@ Rewriter::dispatchOnLex(Analysis &a, ProxyState &ps,
     LOG(cdb_v) << "pre-analyze " << *lex;
 
     // optimization: do not process queries that we will not rewrite
-    if (noRewrite(*new_lex))
-    {
+    if (noRewrite(*new_lex)) {
         return new SimpleOutput(query);
-    }
-    else if (dml_dispatcher->canDo(new_lex))
-    {
+    } else if (dml_dispatcher->canDo(new_lex)) {
         const SQLHandler &handler = dml_dispatcher->dispatch(new_lex);
         AssignOnce<LEX *> out_lex;
 
-        try
-        {
-            /*
+        try {
+        	/*
         	 * debug
         	 */
             out_lex = handler.transformLex(a, new_lex, ps);
-        }
-        catch (OnionAdjustExcept e)
-        {
+        } catch (OnionAdjustExcept e) {
             LOG(cdb_v) << "caught onion adjustment";
-            std::pair<std::vector<std::unique_ptr<Delta>>,
+            std::pair<std::vector<std::unique_ptr<Delta> >,
                       std::list<std::string>>
                 out_data = adjustOnion(a, e.o, e.tm, e.fm, e.tolevel);
-            std::vector<std::unique_ptr<Delta>> &deltas =
+            std::vector<std::unique_ptr<Delta> > &deltas =
                 out_data.first;
-            const std::list<std::string> &adjust_queries =
+            const std::list<std::string>  &adjust_queries =
                 out_data.second;
             std::function<std::string(const std::string &)>
-                hackEscape = [&ps](const std::string &s) {
-                    return escapeString(ps.getConn(), s);
-                };
+                hackEscape = [&ps](const std::string &s)
+            {
+                return escapeString(ps.getConn(), s);
+            };
             return new AdjustOnionOutput(query, std::move(deltas),
                                          adjust_queries, hackEscape);
         }
@@ -1383,283 +1331,242 @@ Rewriter::dispatchOnLex(Analysis &a, ProxyState &ps,
         ps.updateOPE = a.updateOPE;
 
         // Return if it's a regular DML query.
-        if (false == a.special_update)
-        {
+        if (false == a.special_update) {
             return new DMLOutput(query, lex_to_query(out_lex.get()));
         }
 
         // Handle HOMorphic UPDATE.
         const auto plain_table =
-            new_lex->select_lex.top_join_list.head()->table_name;
+        	new_lex->select_lex.top_join_list.head()->table_name;
         const auto crypted_table =
             out_lex.get()->select_lex.top_join_list.head()->table_name;
         std::string where_clause;
-        if (new_lex->select_lex.where)
-        {
+        if (new_lex->select_lex.where) {
             std::ostringstream where_stream;
             where_stream << " " << *new_lex->select_lex.where << " ";
             where_clause = where_stream.str();
-        }
-        else
-        {
+        } else {
             where_clause = " TRUE ";
         }
 
-        return new SpecialUpdate(query, plain_table, crypted_table,
+        return new SpecialUpdate(query,  plain_table, crypted_table,
                                  where_clause, a.getDatabaseName(), ps);
-    }
-    else if (ddl_dispatcher->canDo(new_lex))
-    {
+    } else if (ddl_dispatcher->canDo(new_lex)) {
         const SQLHandler &handler = ddl_dispatcher->dispatch(new_lex);
         LEX *const out_lex = handler.transformLex(a, new_lex, ps);
         // HACK.
         const std::string &original_query =
-            new_lex->sql_command != SQLCOM_LOCK_TABLES ? query : "do 0";
+        		new_lex->sql_command != SQLCOM_LOCK_TABLES ? query : "do 0";
 
         return new DDLOutput(original_query, lex_to_query(out_lex),
                              std::move(a.deltas));
-    }
-    else
-    {
+    } else {
         return NULL;
     }
 }
 
-LEX *Rewriter::transformForWhereClause(LEX *lex, Analysis &a)
-{
-    LEX *const new_lex = copyWithTHD(lex);
+LEX *
+Rewriter::transformForWhereClause(LEX *lex, Analysis &a) {
+	LEX *const new_lex = copyWithTHD(lex);
 
-    if (noRewrite(*new_lex) || noWhere(*new_lex))
-    {
-        return new_lex;
-    }
-    else if (dml_dispatcher->canDo(new_lex))
-    {
-        return do_transform_where(*new_lex, a);
-    }
-    else
-    {
-        return new_lex;
-    }
+	if (noRewrite(*new_lex) || noWhere(*new_lex)) {
+		return new_lex;
+	} else if (dml_dispatcher->canDo(new_lex)) {
+		return do_transform_where(*new_lex, a);
+	} else {
+		return new_lex;
+	}
 }
 
-LEX *do_transform_where(const LEX &lex, Analysis &a)
-{
-    LEX *const new_lex = copyWithTHD(&lex);
+LEX *
+do_transform_where(const LEX &lex, Analysis &a) {
+	LEX *const new_lex = copyWithTHD(&lex);
 
-    if (new_lex->select_lex.where)
-    {
-        set_where(&(new_lex->select_lex), typical_do_transform_where(*new_lex->select_lex.where, a));
-        return new_lex;
-    }
-    else
-    {
-        if (SQLCOM_DELETE == lex.sql_command || SQLCOM_UPDATE == lex.sql_command)
-        {
-            /**
+	if (new_lex->select_lex.where) {
+		set_where(&(new_lex->select_lex), typical_do_transform_where(*new_lex->select_lex.where, a));
+		return new_lex;
+	} else {
+		if (SQLCOM_DELETE == lex.sql_command || SQLCOM_UPDATE == lex.sql_command) {
+			/**
 			 * TODO: call a.loadAllSalts().
 			 */
 
-            loadAllSalsFromFile(a.getDatabaseName(), lex.query_tables, a);
-            a.table_name_last_used = lex.query_tables->table_name;
-        }
-        return new_lex;
-    }
+			loadAllSalsFromFile(a.getDatabaseName(), lex.query_tables, a);
+			a.table_name_last_used = lex.query_tables->table_name;
+		}
+		return new_lex;
+	}
 }
 
 Item *
-typical_do_transform_where(const Item &item, Analysis &a)
-{
-    if (Item::Type::FUNC_ITEM == item.type())
-    {
-        // assert(2 == item_func->arg_count);
-        return makeItemCondPairs(static_cast<const Item_func &>(item), a);
-    }
-    // TODO: recursively transform the where clause until the type the item is "Item_func".
-    if (Item::Type::COND_ITEM == item.type())
-    {
-        const Item_cond &tmp_item = static_cast<const Item_cond &>(item);
-        return Item_cond::Functype::COND_AND_FUNC == tmp_item.functype() ? do_transform_where_and(static_cast<const Item_cond_and &>(item), a) : do_transform_where_or(static_cast<const Item_cond_or &>(item), a);
-    }
-    else
-    {
-        // We do nothing.
-        return copyWithTHD(&item);
-    }
+typical_do_transform_where(const Item &item, Analysis &a) {
+	if (Item::Type::FUNC_ITEM == item.type()) {
+		// assert(2 == item_func->arg_count);
+		return makeItemCondPairs(static_cast<const Item_func &>(item), a);
+	}
+	// TODO: recursively transform the where clause until the type the item is "Item_func".
+	if (Item::Type::COND_ITEM == item.type()) {
+		const Item_cond& tmp_item = static_cast<const Item_cond &>(item);
+		return
+				Item_cond::Functype::COND_AND_FUNC == tmp_item.functype() ?
+					do_transform_where_and(static_cast<const Item_cond_and&>(item), a) :
+					do_transform_where_or(static_cast<const Item_cond_or&>(item), a);
+	} else {
+		// We do nothing.
+		return copyWithTHD(&item);
+	}
 }
 
 Item *
-do_transform_where_and(const Item_cond_and &item_cond_and, Analysis &a)
-{
-    Item_cond_and *const new_item_cond = new Item_cond_and();
-    // FIXME: Should be done in a loop.
-    auto it =
-        RiboldMYSQL::constList_iterator<Item>(*RiboldMYSQL::argument_list(item_cond_and));
-    for (;;)
-    {
-        const Item *const argitem = it++;
-        if (!argitem)
-        {
-            break;
-        }
+do_transform_where_and(const Item_cond_and &item_cond_and, Analysis &a) {
+	Item_cond_and *const new_item_cond = new Item_cond_and();
+	// FIXME: Should be done in a loop.
+	auto it =
+	          RiboldMYSQL::constList_iterator<Item>(*RiboldMYSQL::argument_list(item_cond_and));
+	 for (;;) {
+		 const Item *const argitem = it++;
+	     if (!argitem) {
+	    	 break;
+	     }
 
-        Item *const cond_item_from_lower = typical_do_transform_where(*argitem, a);
-        new_item_cond->add(cond_item_from_lower);
-    }
+	     Item *const cond_item_from_lower = typical_do_transform_where(*argitem, a);
+	     new_item_cond->add(cond_item_from_lower);
+	 }
 
-    return new_item_cond;
+	return new_item_cond;
 }
 
 Item *
-do_transform_where_or(const Item_cond_or &item_cond_or, Analysis &a)
-{
-    Item_cond_or *const new_item_cond = new Item_cond_or();
-    // FIXME: Should be done in a loop.
-    auto it =
-        RiboldMYSQL::constList_iterator<Item>(*RiboldMYSQL::argument_list(item_cond_or));
-    for (;;)
-    {
-        const Item *const argitem = it++;
-        if (!argitem)
-        {
-            break;
-        }
+do_transform_where_or(const Item_cond_or &item_cond_or, Analysis &a) {
+	Item_cond_or *const new_item_cond = new Item_cond_or();
+	// FIXME: Should be done in a loop.
+	auto it =
+	          RiboldMYSQL::constList_iterator<Item>(*RiboldMYSQL::argument_list(item_cond_or));
+	 for (;;) {
+		 const Item *const argitem = it++;
+	     if (!argitem) {
+	    	 break;
+	     }
 
-        Item *const cond_item_from_lower = typical_do_transform_where(*argitem, a);
-        new_item_cond->add(cond_item_from_lower);
-    }
+	     Item *const cond_item_from_lower = typical_do_transform_where(*argitem, a);
+	     new_item_cond->add(cond_item_from_lower);
+	 }
 
-    return new_item_cond;
+	return new_item_cond;
 }
 
-bool isDETFunc(const Item_func &item)
-{
-    switch (item.type())
-    {
-    case Item_func::Functype::EQ_FUNC:
-    case Item_func::Functype::NE_FUNC:
-    case Item_func::Functype::EQUAL_FUNC:
-        return true;
-    default:
-        return false;
-    }
-    return false;
+bool
+isDETFunc(const Item_func &item) {
+	switch(item.type()) {
+	case Item_func::Functype::EQ_FUNC:
+	case Item_func::Functype::NE_FUNC:
+	case Item_func::Functype::EQUAL_FUNC:
+		return true;
+	default:
+		return false;
+	}
+	return false;
 }
 
 Item *
-makeItemCondPairs(const Item_func &item, Analysis &a)
-{
-    if (true == isDETFunc(item))
-    {
-        // Check if the itme is a subselect_item.
-        Item *const *const args = item.arguments();
-        if (Item::Type::SUBSELECT_ITEM == args[1]->type())
-        {
-            const st_select_lex *const select_lex =
-                RiboldMYSQL::get_select_lex(*copyWithTHD(static_cast<Item_subselect *>(args[1])));
+makeItemCondPairs(const Item_func &item, Analysis &a) {
+	if (true == isDETFunc(item)) {
+		// Check if the itme is a subselect_item.
+		Item *const *const args = item.arguments();
+		if (Item::Type::SUBSELECT_ITEM == args[1]->type()) {
+			const st_select_lex *const select_lex =
+			            RiboldMYSQL::get_select_lex(*copyWithTHD(static_cast<Item_subselect *>(args[1])));
 
-            if (select_lex->where)
-            {
-                return typical_do_transform_where(*select_lex->where, a);
-            }
-            else
-            {
-                return copyWithTHD(&item);
-            }
-        }
+			if (select_lex->where) {
+				return typical_do_transform_where(*select_lex->where, a);
+			} else {
+				return copyWithTHD(&item);
+			}
+		}
 
-        const std::string field_name = args[0]->name;
-        const long long val = args[1]->val_int();
+		const std::string field_name = args[0]->name;
+		const long long val = args[1]->val_int();
 
-        if (needFrequencySmoothing(field_name))
-        {
-            //FIXME: LOGIC IS WRONG WITH NOT...
-            Item_cond *item_cond = nullptr;
+		if (needFrequencySmoothing(field_name)) {
+			//FIXME: LOGIC IS WRONG WITH NOT...
+			Item_cond * item_cond = nullptr;
 
-            // <> should use and.
-            if (Item_func::Functype::NE_FUNC == item.functype())
-            {
-                item_cond = new Item_cond_and();
-            }
-            else
-            {
-                item_cond = new Item_cond_or();
-            }
+			// <> should use and.
+			if (Item_func::Functype::NE_FUNC == item.functype()) {
+				item_cond = new Item_cond_and();
+			} else {
+				item_cond = new Item_cond_or();
+			}
 
-            const std::string &db_name = a.getDatabaseName();
-            const Item_field *const item_field = static_cast<const Item_field *>(args[0]);
-            const std::string &table_name = item_field->table_name;
+			const std::string &db_name = a.getDatabaseName();
+			const Item_field *const item_field = static_cast<const Item_field *>(args[0]);
+			const std::string &table_name = item_field->table_name;
 
-            unsigned long long salt_count = getSaltCount(db_name, table_name, field_name, std::to_string(val), a);
-            //unsigned long long salt_count = 2;
-            while (salt_count-- >= 1)
-            {
-                item_cond->add(copyWithTHD(&item));
-            }
+			unsigned long long salt_count = getSaltCount(db_name, table_name, field_name, std::to_string(val), a);
+			//unsigned long long salt_count = 2;
+			while (salt_count-- >= 1) {
+				item_cond->add(copyWithTHD(&item));
+			}
 
-            return item_cond;
-        }
-    }
+			return item_cond;
+		}
+	}
 
-    return copyWithTHD(&item);
+	return copyWithTHD(&item);
 }
 
 unsigned long long
 getSaltCount(const std::string &db_name, const std::string &table_name, const std::string &field_name,
-             const std::string &val, Analysis &a)
-{
-    // Create a directory for the storage of salt table.
-    std::string dir = "CryptDB_DATA/";
-    dir.append(db_name + '/');
-    dir.append(table_name);
+			   const std::string &val, Analysis &a) {
+	// Create a directory for the storage of salt table.
+	std::string dir = "CryptDB_DATA/";
+	dir.append(db_name + '/');
+	dir.append(table_name);
 
-    /**
+	/**
 	 * Check first if the directory exists on the system.
 	 */
-    struct stat sb;
-    if (!stat(dir.c_str(), &sb) == 0 || !S_ISDIR(sb.st_mode))
-    {
-        std::string command = "mkdir -p ";
-        command.append(dir);
-        system(command.c_str());
-    }
+	struct stat sb;
+	if (!stat(dir.c_str(), &sb) == 0 || !S_ISDIR(sb.st_mode)) {
+		std::string command = "mkdir -p ";
+		command.append(dir);
+		system(command.c_str());
+	}
 
-    /**
+	/**
 	 * TODO: This is done by using json parser.
 	 */
-    dir.append("/");
-    std::string file_name = dir.append(field_name + ".json");
-    return do_get_salt_count(dir, file_name, val, a);
+	dir.append("/");
+	std::string file_name = dir.append(field_name + ".json");
+	return do_get_salt_count(dir, file_name, val, a);
 }
 
 unsigned long long
 do_get_salt_count(const std::string &dir, const std::string &file_name,
-                  const std::string &val, Analysis &a)
-{
-    // Create a rapidjson Document object.
-    rapidjson::Document doc;
+				    const std::string &val, Analysis &a) {
+	// Create a rapidjson Document object.
+	rapidjson::Document doc;
 
-    // Read from file.
-    FILE *fp = fopen(file_name.c_str(), "r");
-    char read_buffer[65536];
-    rapidjson::FileReadStream frs(fp, read_buffer, sizeof(read_buffer));
+	// Read from file.
+	FILE *fp = fopen(file_name.c_str(), "r");
+	char read_buffer[65536];
+	rapidjson::FileReadStream frs(fp, read_buffer, sizeof(read_buffer));
 
-    // Parse the file into DOM.
-    doc.ParseStream(frs);
-    fclose(fp);
+	// Parse the file into DOM.
+	doc.ParseStream(frs);
+	fclose(fp);
 
-    assert(doc.IsObject());
+	assert(doc.IsObject());
 
-    assert(doc["salts"].IsArray());
-    // If salts not found, then we should load it to the Analysis.
-    unsigned int count;
-    assert((count = a.loadSaltsFromJsonDOM(doc, val)) != 0);
-    return count;
+	assert(doc["salts"].IsArray());
+	// If salts not found, then we should load it to the Analysis.
+	unsigned int count;
+	assert((count = a.loadSaltsFromJsonDOM(doc, val)) != 0);
+	return count;
 }
 
-struct DirectiveData
-{
-    std::string database_name;
+struct DirectiveData {
+	std::string database_name;
     std::string table_name;
     std::string field_name;
     SECURITY_RATING sec_rating;
@@ -1671,48 +1578,46 @@ struct DirectiveData
 
     DirectiveData(const std::string query)
     {
-        isSetParam = false;
+    	isSetParam = false;
         std::list<std::string> tokens = split(query, " ");
 
         // DIRECTIVE
         tokens.pop_front();
 
-        if (tokens.front() == "SETPARAM")
-        {
-            isSetParam = true;
-            tokens.pop_front();
-            database_name = tokens.front();
+        if (tokens.front() == "SETPARAM") {
+        	isSetParam = true;
+        	tokens.pop_front();
+        	database_name = tokens.front();
 
-            tokens.pop_front();
-            table_name = tokens.front();
+        	tokens.pop_front();
+        	table_name = tokens.front();
 
-            tokens.pop_front();
-            field_name = tokens.front();
+        	tokens.pop_front();
+        	field_name = tokens.front();
 
-            tokens.pop_front();
-            param = tokens.front();
-            tokens.pop_front();
-            tokens.pop_front();
-            val = stod(tokens.front());
+        	tokens.pop_front();
+        	param = tokens.front();
+        	tokens.pop_front();
+        	tokens.pop_front();
+        	val = stod(tokens.front());
 
-            dir.append("CryptDB_DATA/");
-            dir.append(database_name + "/");
-            dir.append(table_name + "/");
-            dir.append(field_name + ".json");
+        	dir.append("CryptDB_DATA/");
+        	dir.append(database_name + "/");
+        	dir.append(table_name + "/");
+        	dir.append(field_name + ".json");
+        } else {
+        	tokens.pop_front();
+
+        	table_name = tokens.front();
+        	tokens.pop_front();
+
+        	field_name = tokens.front();
+        	tokens.pop_front();
+
+        	sec_rating = TypeText<SECURITY_RATING>::toType(tokens.front());
+        	tokens.pop_front();
         }
-        else
-        {
-            tokens.pop_front();
 
-            table_name = tokens.front();
-            tokens.pop_front();
-
-            field_name = tokens.front();
-            tokens.pop_front();
-
-            sec_rating = TypeText<SECURITY_RATING>::toType(tokens.front());
-            tokens.pop_front();
-        }
     }
 };
 
@@ -1731,63 +1636,53 @@ Rewriter::handleDirective(Analysis &a, const ProxyState &ps,
 {
     DirectiveData data(query);
 
-    if (data.isSetParam)
-    {
-        std::cout << "set param!\n";
-        FILE *file = fopen(data.dir.c_str(), "r");
-        char buffer[65535];
-        rapidjson::Document doc;
-        rapidjson::FileReadStream frs(file, buffer, sizeof(buffer));
+    if (data.isSetParam) {
+    	std::cout << "set param!\n";
+    	FILE *file = fopen(data.dir.c_str(), "r");
+    	char buffer[65535];
+    	rapidjson::Document doc;
+    	rapidjson::FileReadStream frs(file, buffer, sizeof(buffer));
 
-        // Parse the file into DOM.
-        doc.ParseStream(frs);
-        fclose(file);
+    	// Parse the file into DOM.
+    	doc.ParseStream(frs);
+    	fclose(file);
 
-        doc[data.param.c_str()] = data.val;
-        file = fopen(data.dir.c_str(), "w");
-        rapidjson::FileWriteStream fws(file, buffer, sizeof(buffer));
-        rapidjson::Writer<rapidjson::FileWriteStream> writer(fws);
-        doc.Accept(writer);
-        fclose(file);
+    	doc[data.param.c_str()] = data.val;
+    	file = fopen(data.dir.c_str(), "w");
+    	rapidjson::FileWriteStream fws(file, buffer, sizeof(buffer));
+    	rapidjson::Writer<rapidjson::FileWriteStream> writer(fws);
+    	doc.Accept(writer);
+    	fclose(file);
 
-        return new SimpleOutput(mysql_noop());
-    }
-    else
-    {
+    	return new SimpleOutput(mysql_noop());
+    } else {
         const FieldMeta &fm =
             a.getFieldMeta(a.getDatabaseName(), data.table_name,
                            data.field_name);
         const SECURITY_RATING current_rating = fm.getSecurityRating();
-        if (current_rating < data.sec_rating)
-        {
+        if (current_rating < data.sec_rating) {
             FAIL_TextMessageError("cryptdb does not support going to a more"
                                   " secure rating!");
-        }
-        else if (current_rating == data.sec_rating)
-        {
+        } else if (current_rating == data.sec_rating) {
             return new SimpleOutput(mysql_noop());
-        }
-        else
-        {
+        } else {
             // Actually do things.
             FAIL_TextMessageError("implement handleDirective!");
         }
     }
 }
 
-static bool
+static
+bool
 cryptdbDirective(const std::string &query)
 {
     std::size_t found = query.find("DIRECTIVE");
-    if (std::string::npos == found)
-    {
+    if (std::string::npos == found) {
         return false;
     }
-
-    for (std::size_t i = 0; i < found; ++i)
-    {
-        if (!std::isspace(query[i]))
-        {
+    
+    for (std::size_t i = 0; i < found; ++i) {
+        if (!std::isspace(query[i])) {
             return false;
         }
     }
@@ -1809,18 +1704,14 @@ Rewriter::rewrite(ProxyState &ps, const std::string &q,
 
     // output就是重写后的SQL语句集
     RewriteOutput *output;
-    if (cryptdbDirective(q))
-    { // 不需要进行重写
-        std::cout << "Directive SQL!\n";
+    if (cryptdbDirective(q)) { // 不需要进行重写
+    	std::cout << "Directive SQL!\n";
         output = Rewriter::handleDirective(analysis, ps, q);
-    }
-    else
-    {
+    } else {
         // NOTE: Care what data you try to read from Analysis
         // at this height.
         output = Rewriter::dispatchOnLex(analysis, ps, q); // 进行重写
-        if (!output)
-        {
+        if (!output) {
             output = new SimpleOutput(mysql_noop());
         }
         // std::cout << "sizeof updateopes: " << analysis.updateOPEs.size() << std::endl;
@@ -1831,8 +1722,7 @@ Rewriter::rewrite(ProxyState &ps, const std::string &q,
 }
 
 //TODO: replace stringify with <<
-std::string ReturnField::stringify()
-{
+std::string ReturnField::stringify() {
     std::stringstream res;
 
     res << " is_salt: " << is_salt << " filed_called " << field_called;
@@ -1841,12 +1731,10 @@ std::string ReturnField::stringify()
 
     return res.str();
 }
-std::string ReturnMeta::stringify()
-{
+std::string ReturnMeta::stringify() {
     std::stringstream res;
     res << "rmeta contains " << rfmeta.size() << " elements: \n";
-    for (auto it : rfmeta)
-    {
+    for (auto it : rfmeta) {
         res << it.first << " " << it.second.stringify() << "\n";
     }
     return res.str();
@@ -1863,52 +1751,44 @@ Rewriter::decryptResults(const ResType &dbres, const ReturnMeta &rmeta)
 
     // un-anonymize the names
     for (auto it = dbres.names.begin();
-         it != dbres.names.end(); it++)
-    {
+        it != dbres.names.end(); it++) {
         const unsigned int index = it - dbres.names.begin();
         const ReturnField &rf = rmeta.rfmeta.at(index);
-        if (!rf.getIsSalt())
-        {
+        if (!rf.getIsSalt()) {
             //need to return this field
             res.names.push_back(rf.fieldCalled());
             // switch types to original ones : TODO
+
         }
     }
 
     const unsigned int real_cols = res.names.size();
 
     //allocate space in results for decrypted rows
-    res.rows = std::vector<std::vector<std::shared_ptr<Item>>>(rows);
-    for (unsigned int i = 0; i < rows; i++)
-    {
-        res.rows[i] = std::vector<std::shared_ptr<Item>>(real_cols);
+    res.rows = std::vector<std::vector<std::shared_ptr<Item> > >(rows);
+    for (unsigned int i = 0; i < rows; i++) {
+        res.rows[i] = std::vector<std::shared_ptr<Item> >(real_cols);
     }
 
     // decrypt rows
     unsigned int col_index = 0;
-    for (unsigned int c = 0; c < cols; c++)
-    {
-        //std::cout << "test:::::" << res.names[c] << std::endl;
+    for (unsigned int c = 0; c < cols; c++) {
+    	//std::cout << "test:::::" << res.names[c] << std::endl;
         const ReturnField &rf = rmeta.rfmeta.at(c);
-        if (rf.getIsSalt())
-        {
+        if (rf.getIsSalt()) {
             continue;
         }
         bool needEnc = (needEncryption(res.names[c])) ||
-                       (needFrequencySmoothing(res.names[c]));
+        			    (needFrequencySmoothing(res.names[c]));
         FieldMeta *const fm = rf.getOLK().key;
-        for (unsigned int r = 0; r < rows; r++)
-        {
-            if (!fm || dbres.rows[r][c]->is_null() || false == needEnc)
-            {
+        for (unsigned int r = 0; r < rows; r++) {
+            if (!fm || dbres.rows[r][c]->is_null()
+            		|| false == needEnc) {
                 res.rows[r][col_index] = dbres.rows[r][c];
-            }
-            else
-            {
+            } else {
                 uint64_t salt = 0;
                 const int salt_pos = rf.getSaltPosition();
-                if (salt_pos >= 0)
-                {
+                if (salt_pos >= 0) {
                     Item_int *const salt_item =
                         static_cast<Item_int *>(dbres.rows[r][salt_pos].get());
                     assert_s(!salt_item->null_value, "salt item is null");
@@ -1954,20 +1834,19 @@ executeQuery(ProxyState &ps, const std::string &q,
      * change
      */
     std::unique_ptr<DBResult> dbres;
-    for (auto it : out_queryz)
-    {
-        if (true == pp)
-        {
+    for (auto it : out_queryz) {
+        if (true == pp) {
             prettyPrintQuery(it); // 输出重写后的SQL语句，以QUERY:为标识
         }
         if ((strncmp(toLowerCase(it).c_str(), "use", 3) == 0) ||
-            (strncmp(toLowerCase(it).c_str(), "create database", 15) == 0) ||
-            (strncmp(toLowerCase(it).c_str(), "drop database", 13) == 0))
-        {
-            TEST_Sync(ps.getConn()->execute(it, &dbres,
-                                            qr->output->multipleResultSets()),
-                      "failed to execute query!");
-            std::cout << "hello\n";
+        		(strncmp(toLowerCase(it).c_str(), "create database", 15) == 0) ||
+        		(strncmp(toLowerCase(it).c_str(), "drop database", 13) == 0)
+        		) {
+        	TEST_Sync(ps.getConn()->execute(it, &dbres,
+        	                                    qr->output->multipleResultSets()),
+        	                  "failed to execute query!");
+        	std::cout << "hello\n";
+
         }
         // 在mysql数据库中真正执行重写后的每一句SQL语句，结果存入dbres
         // 其中的getConn()返回一个真争得mysql连接
@@ -1980,6 +1859,7 @@ executeQuery(ProxyState &ps, const std::string &q,
         // XOR: Either we have one result set, or we were expecting
         // multiple result sets and we threw them all away.
         // assert(!!dbres != !!qr->output->multipleResultSets());
+
     }
 
     // ----------------------------------
@@ -1989,8 +1869,8 @@ executeQuery(ProxyState &ps, const std::string &q,
     /*
      * change
      */
-    //    const ResType &res =
-    //        dbres ? ResType(dbres->unpack()) : mysql_noop_res(ps); ?
+//    const ResType &res =
+//        dbres ? ResType(dbres->unpack()) : mysql_noop_res(ps); ?
     const ResType &res = mysql_noop_res(ps);
     assert(res.success());
     // 进行解密以及输出解密后的结果
@@ -2003,261 +1883,235 @@ executeQuery(ProxyState &ps, const std::string &q,
 }
 
 static Item *
-getItem(char *const content, enum_field_types type, uint len)
-{
-    if (content == NULL)
-    {
+getItem(char *const content, enum_field_types type, uint len){
+    if (content == NULL) {
         return new Item_null();
     }
     const std::string content_str = std::string(content, len);
-    if (IsMySQLTypeNumeric(type))
-    {
+    if (IsMySQLTypeNumeric(type)) {
         const ulonglong val = valFromStr(content_str);
         return new Item_int(val);
-    }
-    else
-    {
+    } else {
         return new Item_string(make_thd_string(content_str), len,
                                &my_charset_bin);
     }
 }
 
-void printResult(struct Result *result)
-{
-    std::cout << "===================printResult begin====================" << std::endl;
-    std::cout << "result->result_size: " << result->result_size << std::endl;
-    std::cout << "result->name_size: " << result->name_size << std::endl;
-    std::cout << "result->name_num: " << result->name_num << std::endl;
-    std::cout << "result->type_size: " << result->type_size << std::endl;
-    std::cout << "result->type_num: " << result->type_num << std::endl;
-    std::cout << "result->data_size: " << result->data_size << std::endl;
-    std::cout << "result->data_row: " << result->data_row << std::endl;
-    std::cout << "result->data_col: " << result->data_col << std::endl;
+void printResult(struct Result* result){
+	std::cout << "===================printResult begin====================" << std::endl;
+	std::cout << "result->result_size: " << result->result_size << std::endl;
+	std::cout << "result->name_size: " << result->name_size << std::endl;
+	std::cout << "result->name_num: " << result->name_num << std::endl;
+	std::cout << "result->type_size: " << result->type_size << std::endl;
+	std::cout << "result->type_num: " << result->type_num << std::endl;
+	std::cout << "result->data_size: " << result->data_size << std::endl;
+	std::cout << "result->data_row: " << result->data_row << std::endl;
+	std::cout << "result->data_col: " << result->data_col << std::endl;
     std::cout << "result->name address: " << &(result->result) << std::endl;
     std::cout << "result->type address: " << &(result->result) + result->name_size << std::endl;
     std::cout << "result->data address: " << &(result->result) + result->name_size + result->type_size << std::endl;
     // 输出查询查询语句
-    std::cout << "query: " << (char *)(result->result) << std::endl;
+    std::cout << "query: " << (char*)(result->result) << std::endl;
     // 输出属性集和类型集
-    int pointer_name = result->query_size;
-    int pointer_type = result->query_size;
-    for (int i = 0; i < result->name_num; i++)
-    {
-        std::cout << "name: " << (char *)(result->result + pointer_name) << std::endl;
-        std::cout << "type: " << (char *)(result->result + result->name_size + pointer_type) << std::endl;
-        pointer_name += (strlen((char *)(result->result + pointer_name)) + 1);
-        pointer_type += (strlen((char *)(result->result + result->name_size + pointer_type)) + 1);
-    }
-    // 输出结果集
-    int pointer_data = result->query_size;
-    for (int i = 0; i < result->data_row; i++)
-    {
-        for (int j = 0; j < result->data_col; j++)
-        {
-            std::cout << "data: " << (char *)(result->result + result->name_size + result->type_size + pointer_data) << std::endl;
-            pointer_data += (strlen((char *)(result->result + result->name_size + result->type_size + pointer_data)) + 1);
-        }
-    }
-    std::cout << "===================printResult end=====================" << std::endl;
+	int pointer_name = result->query_size;
+	int pointer_type = result->query_size;
+	for(int i = 0; i < result->name_num; i++){
+		std::cout << "name: " << (char*)(result->result + pointer_name) << std::endl;
+		std::cout << "type: " << (char*)(result->result + result->name_size + pointer_type) << std::endl;
+		pointer_name += (strlen((char*)(result->result + pointer_name)) + 1);
+		pointer_type += (strlen((char*)(result->result + result->name_size + pointer_type)) + 1);
+	}
+	// 输出结果集
+	int pointer_data = result->query_size;
+	for(int i = 0; i < result->data_row; i++){
+		for(int j = 0; j < result->data_col; j++){
+			std::cout << "data: " << (char*)(result->result + result->name_size + result->type_size + pointer_data) << std::endl;
+			pointer_data += (strlen((char*)(result->result + result->name_size + result->type_size + pointer_data)) + 1);
+		}
+	}
+	std::cout << "===================printResult end=====================" << std::endl;
 }
 
 char getHexChar(char i)
 {
-    if (i <= 9)
-        return '0' + i;
-    else
-        return 'A' + i - 10;
+	if (i <= 9)
+		return '0' + i;
+	else
+		return 'A' + i-10;
 }
 char getBYteValue(char i)
 {
-    if (i <= '9')
-        return i - '0';
-    else
-        return i - 'A' + 10;
+	if (i <= '9')
+		return i - '0';
+	else
+		return i - 'A'+10;
 }
 
-char *EncodeBase64(char *buf, long size)
-{
+char* EncodeBase64(char* buf, long size) {
 
-    char *base64Char = (char *)malloc(size * 2);
-    int i = 0;
-    while (i < size)
-    {
-        char b0 = buf[i];
-        base64Char[2 * i] = getHexChar(((b0 & 0xF0) >> 4) & 0x0F);
-        base64Char[2 * i + 1] = getHexChar((b0 & 0x0F));
-        i++;
-    }
-    //	base64Char[2 * i ] = '\0';
-    return base64Char;
+	char *base64Char = (char*)malloc(size * 2);
+	int i = 0;
+	while (i < size) {
+		char b0 = buf[i];
+		base64Char[2 * i] = getHexChar(((b0 & 0xF0) >> 4) & 0x0F);
+		base64Char[2 * i + 1] = getHexChar((b0 & 0x0F));
+		i++;
+	}
+//	base64Char[2 * i ] = '\0';
+	return base64Char;
 }
-char *DecodeBase64(char *base64Char, long base64CharSize)
-{
+char *DecodeBase64(char *base64Char, long base64CharSize) {
 
-    char *originChar = (char *)malloc(base64CharSize / 2);
-    int i = 0;
-    while (i < base64CharSize / 2)
-    {
-        char b0 = base64Char[2 * i];
-        char b1 = base64Char[2 * i + 1];
-        originChar[i] = (getBYteValue(b0) << 4) | getBYteValue(b1);
-        i++;
-    }
-    //	originChar[i] = '\0';
-    return originChar;
+	char *originChar = (char*)malloc(base64CharSize / 2);
+	int i = 0;
+	while (i < base64CharSize/2) {
+		char b0 = base64Char[2 * i];
+		char b1 = base64Char[2 * i + 1];
+		originChar[i] = (getBYteValue(b0) << 4) | getBYteValue(b1);
+		i++;
+	}
+//	originChar[i] = '\0';
+	return originChar;
 }
 
-ResType ResultToResType(struct Result *result)
-{
-    std::cout << "in ResultToResType" << std::endl;
-    ResType restype;
-    // 遍历属性集和类型集
-    int pointer_name = result->query_size;
-    int pointer_type = result->query_size;
-    for (int i = 0; i < result->name_num; i++)
-    {
-        restype.names.push_back((char *)(result->result + pointer_name));
-        int type = atoi((char *)(result->result + result->name_size + pointer_type));
-        restype.types.push_back((enum_field_types)type);
-        pointer_name += (strlen((char *)(result->result + pointer_name)) + 1);
-        pointer_type += (strlen((char *)(result->result + result->name_size + pointer_type)) + 1);
-    }
-    std::cout << "in ResultToResType 遍历结果集" << std::endl;
-    // 遍历结果集
-    int pointer_data = result->query_size;
-    for (int i = 0; i < result->data_row; i++)
-    {
-        std::cout << "in ResultToResType for" << std::endl;
-        std::vector<std::shared_ptr<Item>> resrow;
-        for (int j = 0; j < result->data_col; j++)
-        {
-            std::cout << "in ResultToResType for for" << std::endl;
-            char *data_raw = (char *)(result->result + result->name_size + result->type_size + pointer_data);
-            enum_field_types type = restype.types[j];
-            char *data;
-            unsigned long length = strlen(data_raw);
-            if (type == 253)
-            { // VARBINARY 解码
-                data = DecodeBase64(data_raw, strlen(data_raw));
-                length = strlen(data_raw) / 2;
+ResType ResultToResType(struct Result* result){
+	std::cout << "in ResultToResType" << std::endl;
+	ResType restype;
+	// 遍历属性集和类型集
+	int pointer_name = result->query_size;
+	int pointer_type = result->query_size;
+	for(int i = 0; i < result->name_num; i++){
+		restype.names.push_back((char*)(result->result + pointer_name));
+		int type = atoi((char*)(result->result + result->name_size + pointer_type));
+		restype.types.push_back((enum_field_types)type);
+		pointer_name += (strlen((char*)(result->result + pointer_name)) + 1);
+		pointer_type += (strlen((char*)(result->result + result->name_size + pointer_type)) + 1);
+	}
+	std::cout << "in ResultToResType 遍历结果集" << std::endl;
+	// 遍历结果集
+	int pointer_data = result->query_size;
+	for(int i = 0; i < result->data_row; i++){
+		std::cout << "in ResultToResType for" << std::endl;
+		std::vector<std::shared_ptr<Item> > resrow;
+		for(int j = 0; j < result->data_col; j++){
+			std::cout << "in ResultToResType for for" << std::endl;
+			char* data_raw = (char*)(result->result + result->name_size + result->type_size + pointer_data);
+			enum_field_types type = restype.types[j];
+			char* data;
+			unsigned long length = strlen(data_raw);
+            if(type == 253){ // VARBINARY 解码
+            	data = DecodeBase64(data_raw, strlen(data_raw));
+            	length = strlen(data_raw) / 2;
             }
-            else
-            {
+            else{
                 data = data_raw; // 数据
             }
-            std::cout << "in ResultToResType data: " << data << std::endl;
-            std::cout << "in ResultToResType getItem" << std::endl;
-            Item *const item = getItem(data, type, length);
-            std::cout << "in ResultToResType after getItem" << std::endl;
-            resrow.push_back(std::shared_ptr<Item>(item));
-            pointer_data += (strlen((char *)(result->result + result->name_size + result->type_size + pointer_data)) + 1);
-        }
-        restype.rows.push_back(resrow);
-    }
-    std::cout << "in ResultToResType end" << std::endl;
-    return restype;
+			std::cout << "in ResultToResType data: " << data << std::endl;
+			std::cout << "in ResultToResType getItem" << std::endl;
+			Item *const item = getItem(data, type, length);
+			std::cout << "in ResultToResType after getItem" << std::endl;
+			resrow.push_back(std::shared_ptr<Item>(item));
+			pointer_data += (strlen((char*)(result->result + result->name_size + result->type_size + pointer_data)) + 1);
+		}
+		restype.rows.push_back(resrow);
+	}
+	std::cout << "in ResultToResType end" << std::endl;
+	return restype;
 }
 
-struct Result *ResTypeToResult(ResType &resPlain, ResType &resCipher, char *query)
-{
-    std::cout << "in  ResTypeToResult" << std::endl;
+struct Result*  ResTypeToResult(ResType& resPlain, ResType& resCipher, char* query){
+	std::cout << "in  ResTypeToResult" << std::endl;
 
-    int result_size = 0; //  总大小
+	int result_size = 0; //  总大小
 
-    int name_size = 0;                    // 属性字段大小
-    int name_num = resPlain.names.size(); // 属性字段个数
-    char *name[name_num];                 // 属性字段
+	int name_size = 0; // 属性字段大小
+	int name_num = resPlain.names.size(); // 属性字段个数
+	char* name[name_num]; // 属性字段
 
-    int type_size = 0;                // 类型字段大小
-    int type_num = name_num;          // 类型字段个数
-    char type[type_num][TYPE_LENGTH]; // 类型字段
+	int type_size = 0; // 类型字段大小
+	int type_num = name_num; // 类型字段个数
+	char type[type_num][TYPE_LENGTH]; // 类型字段
 
-    int data_size = 0;                   // 数据大小
-    int data_row = resPlain.rows.size(); // 数据行数
-    int data_col = name_num;             // 数据列数
-    int query_size = strlen(query) + 1;  // 查询语句大小
-    char *data[data_row][data_col];      // 数据字段
+	int data_size = 0; // 数据大小
+	int data_row = resPlain.rows.size(); // 数据行数
+	int data_col = name_num; // 数据列数
+	int query_size = strlen(query) + 1; // 查询语句大小
+	char* data[data_row][data_col]; // 数据字段
 
-    // 获得字段名及字段类型
+	// 获得字段名及字段类型
     std::stringstream ssn;
-    for (int i = 0; i < name_num; i++)
-    {
-        char *name_temp = (char *)resPlain.names[i].c_str(); // 属性
-        name[i] = (char *)malloc(strlen(name_temp) + 1);
-        memset(name[i], 0, strlen(name_temp) + 1);
+    for (int i = 0; i < name_num; i++) {
+        char* name_temp = (char*)resPlain.names[i].c_str(); // 属性
+        name[i] = (char*)malloc(strlen(name_temp) + 1);
+    	memset(name[i], 0, strlen(name_temp) + 1);
         memcpy(name[i], name_temp, strlen(name_temp) + 1);
 
-        name_size = name_size + strlen(name[i]) + 1; // 属性大小
-        sprintf(type[i], "%d", resCipher.types[i]);  // 类型取自密文结果，解密后的restype不含类型
-        type_size = type_size + strlen(type[i]) + 1; // 类型大小
+		name_size = name_size + strlen(name[i]) + 1; // 属性大小
+		sprintf(type[i], "%d", resCipher.types[i]); // 类型取自密文结果，解密后的restype不含类型
+		type_size = type_size + strlen(type[i]) + 1; // 类型大小
         std::cout << "name: " << name[i] << ", length: " << strlen(name[i]) << std::endl;
         std::cout << "type: " << type[i] << ", length: " << strlen(type[i]) << std::endl;
     }
-    std::cout << "total_name_size: " << name_size << std::endl;
-    std::cout << "total_type_size: " << type_size << std::endl;
+	std::cout << "total_name_size: " << name_size << std::endl;
+	std::cout << "total_type_size: " << type_size << std::endl;
 
     // 获得结果值
-    for (int i = 0; i < data_row; i++)
-    {
-        for (int j = 0; j < data_col; j++)
-        {
+    for (int i = 0; i < data_row; i++) {
+        for (int j = 0; j < data_col; j++) {
             std::stringstream sstr;
             sstr << *resPlain.rows[i][j];
             char buf[strlen(sstr.str().c_str()) + 1];
             snprintf(buf, sizeof(buf), "%s", sstr.str().c_str()); // 从string输出流获得数据
-            char *data_raw = (char *)sstr.str().c_str();          // 数据
+            char* data_raw = (char*)sstr.str().c_str(); // 数据
 
-            data[i][j] = (char *)malloc(strlen(data_raw) + 1);
-            memset(data[i][j], 0, strlen(data_raw) + 1);
-            memcpy(data[i][j], data_raw, strlen(data_raw) + 1);
+            data[i][j] = (char*)malloc(strlen(data_raw) + 1);
+        	memset(data[i][j], 0, strlen(data_raw) + 1);
+            memcpy(data[i][j] , data_raw, strlen(data_raw) + 1);
 
-            data_size = data_size + strlen(data[i][j]) + 1; // 数据大小
-            std::cout << "data: " << data[i][j] << ", length: " << strlen(data[i][j]) << std::endl;
+			data_size = data_size + strlen(data[i][j]) + 1; // 数据大小
+			std::cout << "data: " << data[i][j] << ", length: " << strlen(data[i][j]) << std::endl;
         }
     }
-    result_size = name_size + type_size + data_size + sizeof(struct Result) + query_size; // 明文结果总大小
-    std::cout << "total_data_size: " << data_size << std::endl;
-    std::cout << "total_result_size: " << result_size << std::endl;
+	result_size = name_size + type_size + data_size + sizeof(struct Result) + query_size; // 明文结果总大小
+	std::cout << "total_data_size: " << data_size << std::endl;
+	std::cout << "total_result_size: " << result_size << std::endl;
 
-    // 初始化结构结果集
-    struct Result *result = (struct Result *)malloc(result_size);
-    memset(result, 0, result_size);
-    result->result_size = result_size;
-    result->name_size = name_size;
-    result->name_num = name_num;
-    result->type_size = type_size;
-    result->type_num = type_num;
-    result->data_size = data_size;
-    result->data_row = data_row;
-    result->data_col = data_col;
-    result->query_size = strlen(query) + 1;
+	// 初始化结构结果集
+	struct Result* result = (struct Result*)malloc(result_size);
+	memset(result, 0, result_size);
+	result->result_size = result_size;
+	result->name_size = name_size;
+	result->name_num = name_num;
+	result->type_size = type_size;
+	result->type_num = type_num;
+	result->data_size = data_size;
+	result->data_row = data_row;
+	result->data_col = data_col;
+	result->query_size = strlen(query) + 1;
 
-    // 赋值查询语句
-    memcpy((char *)(result->result), query, query_size);
-    // 赋值属性集和类型集
-    int pointer_name = query_size;
-    int pointer_type = query_size;
-    for (int i = 0; i < result->name_num; i++)
-    {
-        memcpy((char *)(result->result + pointer_name), name[i], strlen(name[i]) + 1);
-        memcpy((char *)(result->result + result->name_size + pointer_type), type[i], strlen(type[i]) + 1);
-        pointer_name += (strlen(name[i]) + 1);
-        pointer_type += (strlen(type[i]) + 1);
-    }
-    // 赋值结果集
-    int pointer_data = query_size;
-    for (int i = 0; i < result->data_row; i++)
-    {
-        for (int j = 0; j < result->data_col; j++)
-        {
-            std::cout << "data[i][j]: " << data[i][j] << std::endl;
-            memcpy((char *)(result->result + result->name_size + result->type_size + pointer_data), data[i][j], strlen(data[i][j]) + 1);
-            pointer_data += (strlen(data[i][j]) + 1);
-        }
-    }
-    std::cout << "in ResTypeToResult: " << std::endl;
-    printResult(result);
-    return result;
+	// 赋值查询语句
+	memcpy((char*)(result->result), query, query_size);
+	// 赋值属性集和类型集
+	int pointer_name = query_size;
+	int pointer_type = query_size;
+	for(int i = 0; i < result->name_num; i++){
+		memcpy((char*)(result->result + pointer_name), name[i], strlen(name[i]) + 1);
+		memcpy((char*)(result->result + result->name_size + pointer_type), type[i], strlen(type[i]) + 1);
+		pointer_name += (strlen(name[i]) + 1);
+		pointer_type += (strlen(type[i]) + 1);
+	}
+	// 赋值结果集
+	int pointer_data = query_size;
+	for(int i = 0; i < result->data_row; i++){
+		for(int j = 0; j < result->data_col; j++){
+			std::cout << "data[i][j]: " << data[i][j] << std::endl;
+			memcpy((char*)(result->result + result->name_size + result->type_size + pointer_data), data[i][j], strlen(data[i][j]) + 1);
+			pointer_data += (strlen(data[i][j]) + 1);
+		}
+	}
+	std::cout << "in ResTypeToResult: " << std::endl;
+	printResult(result);
+	return result;
 }
 
 /*
@@ -2281,37 +2135,34 @@ RewriteQuery(ProxyState &ps, const std::string &q,
      * change
      */
     std::unique_ptr<DBResult> dbres;
-    for (auto it : out_queryz)
-    {
-        if (true == pp)
-        {
+    for (auto it : out_queryz) {
+        if (true == pp) {
             prettyPrintQuery(it); // 输出重写后的SQL语句，以QUERY:为标识
         }
         if ((strncmp(toLowerCase(it).c_str(), "use", 3) == 0) ||
-            (strncmp(toLowerCase(it).c_str(), "create database", 15) == 0) ||
-            (strncmp(toLowerCase(it).c_str(), "drop database", 13) == 0) ||
-            //        	    (strncmp(toLowerCase(it).c_str(), "create table", 12) == 0) || // 对远程数据库的操作不必要
-            //        		(strncmp(toLowerCase(it).c_str(), "drop table", 10) == 0) || // 为了得到数据故此执行
-            (strncmp(toLowerCase(it).c_str(), " insert into remote_db", 22) == 0) ||
-            (strncmp(toLowerCase(it).c_str(), " update remote_db", 17) == 0)
-            //        		(strncmp(toLowerCase(it).c_str(), " call", 4) == 0)
-        )
-        {
-            std::cout << "SQL语句执行: " + it << std::endl;
-            TEST_Sync(ps.getConn()->execute(it, &dbres,
-                                            qr->output->multipleResultSets()),
-                      "failed to execute query!");
+        		(strncmp(toLowerCase(it).c_str(), "create database", 15) == 0) ||
+        		(strncmp(toLowerCase(it).c_str(), "drop database", 13) == 0) ||
+//        	    (strncmp(toLowerCase(it).c_str(), "create table", 12) == 0) || // 对远程数据库的操作不必要
+//        		(strncmp(toLowerCase(it).c_str(), "drop table", 10) == 0) || // 为了得到数据故此执行
+        		(strncmp(toLowerCase(it).c_str(), " insert into remote_db",22) == 0) ||
+        		(strncmp(toLowerCase(it).c_str(), " update remote_db", 17) == 0)
+//        		(strncmp(toLowerCase(it).c_str(), " call", 4) == 0)
+        		) {
+        	std::cout << "SQL语句执行: " + it << std::endl;
+        	TEST_Sync(ps.getConn()->execute(it, &dbres,
+        	                                    qr->output->multipleResultSets()),
+        	                  "failed to execute query!");
+
         }
     }
 
     return out_queryz;
 }
 
-struct Result *
+struct Result*
 DecryptResult(ProxyState &ps, const std::string &q,
-              const std::string &default_db, struct Result *result,
-              SchemaCache *const schema_cache, bool pp)
-{
+             const std::string &default_db, struct Result* result,
+             SchemaCache *const schema_cache, bool pp){
     assert(schema_cache);
 
     std::unique_ptr<QueryRewrite> qr;
@@ -2325,39 +2176,36 @@ DecryptResult(ProxyState &ps, const std::string &q,
      * change
      */
     std::unique_ptr<DBResult> dbres;
-    for (auto it : out_queryz)
-    {
-        if (true == pp)
-        {
+    for (auto it : out_queryz) {
+        if (true == pp) {
             prettyPrintQuery(it); // 输出重写后的SQL语句，以QUERY:为标识
         }
         if ((strncmp(toLowerCase(it).c_str(), "use", 3) == 0) ||
-            (strncmp(toLowerCase(it).c_str(), "create database", 15) == 0) ||
-            (strncmp(toLowerCase(it).c_str(), "drop database", 13) == 0))
-        {
-            std::cout << "SQL语句执行: " + it << std::endl;
-            TEST_Sync(ps.getConn()->execute(it, &dbres,
-                                            qr->output->multipleResultSets()),
-                      "failed to execute query!");
+        		(strncmp(toLowerCase(it).c_str(), "create database", 15) == 0) ||
+        		(strncmp(toLowerCase(it).c_str(), "drop database", 13) == 0)
+        		) {
+        	std::cout << "SQL语句执行: " + it << std::endl;
+        	TEST_Sync(ps.getConn()->execute(it, &dbres,
+        	                                    qr->output->multipleResultSets()),
+        	                  "failed to execute query!");
         }
     }
     // 进行解密以及输出解密后的结果
     ResType resCipher = ResultToResType(result); // ResultToResType
     ResType resPlain =
-        resultEpilogue(ps, *qr.get(), resCipher, q, default_db, pp);
-    struct Result *result_return = ResTypeToResult(resPlain, resCipher, (char *)q.data());
+    		resultEpilogue(ps, *qr.get(), resCipher, q, default_db, pp);
+    struct Result* result_return = ResTypeToResult(resPlain, resCipher, (char*)q.data());
     return result_return;
 }
 
-void printRes(const ResType &r)
-{
+void
+printRes(const ResType &r) {
 
     //if (!cryptdb_logger::enabled(log_group::log_edb_v))
     //return;
 
     std::stringstream ssn;
-    for (unsigned int i = 0; i < r.names.size(); i++)
-    {
+    for (unsigned int i = 0; i < r.names.size(); i++) {
         char buf[400];
         snprintf(buf, sizeof(buf), "%-25s", r.names[i].c_str());
         ssn << buf;
@@ -2366,11 +2214,9 @@ void printRes(const ResType &r)
     //LOG(edb_v) << ssn.str();
 
     /* next, print out the rows */
-    for (unsigned int i = 0; i < r.rows.size(); i++)
-    {
+    for (unsigned int i = 0; i < r.rows.size(); i++) {
         std::stringstream ss;
-        for (unsigned int j = 0; j < r.rows[i].size(); j++)
-        {
+        for (unsigned int j = 0; j < r.rows[i].size(); j++) {
             char buf[400];
             std::stringstream sstr;
             sstr << *r.rows[i][j];
@@ -2382,9 +2228,8 @@ void printRes(const ResType &r)
     }
 }
 
-void printResType(const ResType &restype)
-{
-    printRes(restype);
+void printResType(const ResType& restype) {
+	printRes(restype);
 }
 
 EncLayer &OnionMetaAdjustor::getBackEncLayer() const
@@ -2421,8 +2266,7 @@ OnionMetaAdjustor::pullCopyLayers(OnionMeta const &om)
     std::vector<EncLayer *> v;
 
     auto const &enc_layers = om.layers;
-    for (auto it = enc_layers.begin(); it != enc_layers.end(); it++)
-    {
+    for (auto it = enc_layers.begin(); it != enc_layers.end(); it++) {
         v.push_back((*it).get());
     }
 

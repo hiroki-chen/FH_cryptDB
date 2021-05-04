@@ -25,23 +25,18 @@ DBMeta::doFetchChildren(const std::unique_ptr<Connect> &e_conn,
     std::vector<DBMeta *> out_vec;
     std::unique_ptr<DBResult> db_res;
     const std::string parent_id = std::to_string(this->getDatabaseID());
-    const std::string serials_query =
+    const std::string serials_query = 
         " SELECT " + table_name + ".serial_object,"
-                                  "        " +
-        table_name + ".serial_key,"
-                     "        " +
-        table_name + ".id"
-                     " FROM " +
-        table_name +
+        "        " + table_name + ".serial_key,"
+        "        " + table_name + ".id"
+        " FROM " + table_name + 
         " WHERE " + table_name + ".parent_id"
-                                 "   = " +
-        parent_id + ";";
+        "   = " + parent_id + ";";
     // FIXME: Throw exception.
     assert(e_conn->execute(serials_query, &db_res));
     MYSQL_ROW row;
-    while ((row = mysql_fetch_row(db_res->n)))
-    {
-        unsigned long *const l = mysql_fetch_lengths(db_res->n);
+    while ((row = mysql_fetch_row(db_res->n))) {
+        unsigned long * const l = mysql_fetch_lengths(db_res->n);
         assert(l != NULL);
 
         const std::string child_serial_object(row[0], l[0]);
@@ -57,24 +52,23 @@ DBMeta::doFetchChildren(const std::unique_ptr<Connect> &e_conn,
 }
 
 OnionMeta::OnionMeta(onion o, std::vector<SECLEVEL> levels,
-                     const AES_KEY *const m_key,
-                     Create_field *const cf, unsigned long uniq_count)
+                     const AES_KEY * const m_key,
+                     Create_field * const cf, unsigned long uniq_count)
     : onionname(getpRandomName() + TypeText<onion>::toText(o)),
       uniq_count(uniq_count)
 {
-    Create_field *newcf = cf;
+    Create_field * newcf = cf;
     //generate enclayers for encrypted field
 
     const std::string uniqueFieldName = this->getAnonOnionName();
-    for (auto l : levels)
-    {
+    for (auto l: levels) {
         const std::string key =
             m_key ? getLayerKey(m_key, uniqueFieldName, l)
                   : "plainkey";
         std::unique_ptr<EncLayer>
             el(EncLayerFactory::encLayer(o, l, newcf, key));
 
-        Create_field *const oldcf = newcf;
+        Create_field * const oldcf = newcf;
         newcf = el->newCreateField(oldcf);
 
         this->layers.push_back(std::move(el));
@@ -85,7 +79,7 @@ std::unique_ptr<OnionMeta>
 OnionMeta::deserialize(unsigned int id, const std::string &serial)
 {
     assert(id != 0);
-    const auto vec = unserialize_string(serial);
+    const auto vec = unserialize_string(serial); 
 
     const std::string onionname = vec[0];
     const unsigned int uniq_count = atoi(vec[1].c_str());
@@ -115,16 +109,16 @@ OnionMeta::fetchChildren(const std::unique_ptr<Connect> &e_conn)
                            const std::string &,
                            const std::string &)>
         deserialHelper =
-            [this](const std::string &key, const std::string &serial,
-                   const std::string &id) -> EncLayer * {
+    [this] (const std::string &key, const std::string &serial,
+            const std::string &id) -> EncLayer *
+    {
         // > Probably going to want to use indexes in AbstractMetaKey
         // for now, otherwise you will need to abstract and rederive
         // a keyed and nonkeyed version of Delta.
         const std::unique_ptr<UIntMetaKey>
             meta_key(AbstractMetaKey::factory<UIntMetaKey>(key));
         const unsigned int index = meta_key->getValue();
-        if (index >= this->layers.size())
-        {
+        if (index >= this->layers.size()) {
             this->layers.resize(index + 1);
         }
         std::unique_ptr<EncLayer>
@@ -137,13 +131,12 @@ OnionMeta::fetchChildren(const std::unique_ptr<Connect> &e_conn)
     return DBMeta::doFetchChildren(e_conn, deserialHelper);
 }
 
-bool OnionMeta::applyToChildren(std::function<bool(const DBMeta &)>
-                                    fn) const
+bool
+OnionMeta::applyToChildren(std::function<bool(const DBMeta &)>
+    fn) const
 {
-    for (auto it = layers.begin(); it != layers.end(); it++)
-    {
-        if (false == fn(*(*it).get()))
-        {
+    for (auto it = layers.begin(); it != layers.end(); it++) {
+        if (false == fn(*(*it).get())) {
             return false;
         }
     }
@@ -153,10 +146,8 @@ bool OnionMeta::applyToChildren(std::function<bool(const DBMeta &)>
 
 UIntMetaKey const &OnionMeta::getKey(const DBMeta &child) const
 {
-    for (std::vector<EncLayer *>::size_type i = 0; i < layers.size(); ++i)
-    {
-        if (&child == layers[i].get())
-        {
+    for (std::vector<EncLayer *>::size_type i = 0; i< layers.size(); ++i) {
+        if (&child == layers[i].get()) {
             UIntMetaKey *const key = new UIntMetaKey(i);
             // Hold onto the key so we can destroy it when OnionMeta is
             // destructed.
@@ -178,10 +169,8 @@ EncLayer *OnionMeta::getLayerBack() const
 
 bool OnionMeta::hasEncLayer(const SECLEVEL &sl) const
 {
-    for (auto it = layers.begin(); it != layers.end(); it++)
-    {
-        if ((*it)->level() == sl)
-        {
+    for (auto it = layers.begin(); it != layers.end(); it++) {
+        if ((*it)->level() == sl) {
             return true;
         }
     }
@@ -195,10 +184,8 @@ EncLayer *OnionMeta::getLayer(const SECLEVEL &sl) const
                           "Tried getting EncLayer when there are none!");
 
     AssignOnce<EncLayer *> out;
-    for (auto it = layers.begin(); it != layers.end(); it++)
-    {
-        if ((*it)->level() == sl)
-        {
+    for (auto it = layers.begin(); it != layers.end(); it++) {
+        if ((*it)->level() == sl) {
             out = (*it).get();
         }
     }
@@ -229,9 +216,10 @@ FieldMeta::deserialize(unsigned int id, const std::string &serial)
     const bool has_default = string_to_bool(vec[7]);
     const std::string default_value = vec[8];
 
-    return std::unique_ptr<FieldMeta>(new FieldMeta(id, fname, has_salt, salt_name, onion_layout,
-                                                    sec_rating, uniq_count, counter, has_default,
-                                                    default_value));
+    return std::unique_ptr<FieldMeta>
+        (new FieldMeta(id, fname, has_salt, salt_name, onion_layout,
+                       sec_rating, uniq_count, counter, has_default,
+                       default_value));
 }
 
 // If mkey == NULL, the field is not encrypted
@@ -240,29 +228,25 @@ init_onions_layout(const AES_KEY *const m_key,
                    FieldMeta *const fm, Create_field *const cf)
 {
     const onionlayout onion_layout = fm->getOnionLayout();
-    if (fm->getHasSalt() != (static_cast<bool>(m_key) && PLAIN_ONION_LAYOUT != onion_layout))
-    {
+    if (fm->getHasSalt() != (static_cast<bool>(m_key)
+                             && PLAIN_ONION_LAYOUT != onion_layout)) {
         return false;
     }
 
-    if (0 != fm->children.size())
-    {
+    if (0 != fm->children.size()) {
         return false;
     }
 
-    for (auto it : onion_layout)
-    {
+    for (auto it: onion_layout) {
         const onion o = it.first;
         const std::vector<SECLEVEL> levels = it.second;
-        for (auto item : levels)
-        {
-            switch (item)
-            {
-            case SECLEVEL::FHDET:
-                break;
-            default:
-                break;
-            }
+        for (auto item : levels) {
+        	switch(item) {
+        	case SECLEVEL::FHDET:
+        		break;
+        	default:
+        		break;
+        	}
         }
         // A new OnionMeta will only occur with a new FieldMeta so
         // we never have to build Deltaz for our OnionMetaz.
@@ -281,13 +265,14 @@ init_onions_layout(const AES_KEY *const m_key,
     return true;
 }
 
-FieldMeta::FieldMeta(const std::string &name, Create_field *const field,
-                     const AES_KEY *const m_key,
+FieldMeta::FieldMeta(const std::string &name, Create_field * const field,
+                     const AES_KEY * const m_key,
                      SECURITY_RATING sec_rating,
                      unsigned long uniq_count)
     : fname(name), salt_name(BASE_SALT_NAME + getpRandomName()),
       onion_layout(determineOnionLayout(m_key, field, sec_rating)),
-      has_salt(static_cast<bool>(m_key) && onion_layout != PLAIN_ONION_LAYOUT),
+      has_salt(static_cast<bool>(m_key)
+              && onion_layout != PLAIN_ONION_LAYOUT),
       sec_rating(sec_rating), uniq_count(uniq_count), counter(0),
       has_default(determineHasDefault(field)),
       default_value(determineDefaultValue(has_default, field))
@@ -315,7 +300,7 @@ std::string FieldMeta::serialize(const DBObject &parent) const
         serialize_string(bool_to_string(has_default)) +
         serialize_string(default_value);
 
-    return serial;
+   return serial;
 }
 
 std::string FieldMeta::stringify() const
@@ -328,16 +313,15 @@ std::vector<std::pair<const OnionMetaKey *, OnionMeta *>>
 FieldMeta::orderedOnionMetas() const
 {
     std::vector<std::pair<const OnionMetaKey *, OnionMeta *>> v;
-    for (auto it = children.begin(); it != children.end(); it++)
-    {
+    for (auto it = children.begin(); it != children.end(); it++) {
         v.push_back(std::make_pair(&(*it).first, (*it).second.get()));
     }
 
     std::sort(v.begin(), v.end(),
-              [](std::pair<const OnionMetaKey *, OnionMeta *> a,
-                 std::pair<const OnionMetaKey *, OnionMeta *> b) {
-                  return a.second->getUniq() <
-                         b.second->getUniq();
+              [] (std::pair<const OnionMetaKey *, OnionMeta *> a,
+                  std::pair<const OnionMetaKey *, OnionMeta *> b) {
+                return a.second->getUniq() <
+                       b.second->getUniq();
               });
 
     return v;
@@ -352,8 +336,7 @@ std::string FieldMeta::getSaltName() const
 SECLEVEL FieldMeta::getOnionLevel(onion o) const
 {
     const auto om = getChild(OnionMetaKey(o));
-    if (om == NULL)
-    {
+    if (om == NULL) {
         return SECLEVEL::INVALID;
     }
 
@@ -367,49 +350,48 @@ OnionMeta *FieldMeta::getOnionMeta(onion o) const
 
 static bool encryptionNotSupported(const Create_field *const cf)
 {
-    switch (cf->sql_type)
-    {
-    case MYSQL_TYPE_FLOAT:
-    case MYSQL_TYPE_DOUBLE:
-    case MYSQL_TYPE_TIMESTAMP:
-    case MYSQL_TYPE_DATE:
-    case MYSQL_TYPE_TIME:
-    case MYSQL_TYPE_DATETIME:
-    case MYSQL_TYPE_YEAR:
-    case MYSQL_TYPE_NEWDATE:
-    case MYSQL_TYPE_BIT:
-    case MYSQL_TYPE_ENUM:
-    case MYSQL_TYPE_SET:
-    case MYSQL_TYPE_GEOMETRY:
-        return true;
-    default:
-        return false;
+    switch (cf->sql_type) {
+        case MYSQL_TYPE_FLOAT:
+        case MYSQL_TYPE_DOUBLE:
+        case MYSQL_TYPE_TIMESTAMP:
+        case MYSQL_TYPE_DATE:
+        case MYSQL_TYPE_TIME:
+        case MYSQL_TYPE_DATETIME:
+        case MYSQL_TYPE_YEAR:
+        case MYSQL_TYPE_NEWDATE:
+        case MYSQL_TYPE_BIT:
+        case MYSQL_TYPE_ENUM:
+        case MYSQL_TYPE_SET:
+        case MYSQL_TYPE_GEOMETRY:
+            return true;
+        default:
+            return false;
     }
 }
 
 onionlayout FieldMeta::determineOnionLayout(const AES_KEY *const m_key,
                                             const Create_field *const f,
-                                            SECURITY_RATING sec_rating)
+                                            SECURITY_RATING sec_rating
+											)
 {
 
-    std::cout << "In determineOnionLayout...\n";
-    std::string fname = f->field_name;
+	std::cout << "In determineOnionLayout...\n";
+	std::string fname = f->field_name;
 
-    bool needEnc = needEncryption(fname) || needFrequencySmoothing(fname);
+	bool needEnc = needEncryption(fname) || needFrequencySmoothing(fname);
 
-    if (sec_rating == SECURITY_RATING::PLAIN || !needEnc)
-    {
+    if (sec_rating == SECURITY_RATING::PLAIN || !needEnc) {
         // assert(!m_key);
-        LOG(cdb_v) << "hello\n";
-        std::cout << "plain..." << std::endl;
+    	LOG(cdb_v) << "hello\n";
+    	std::cout << "plain..." << std::endl;
         return PLAIN_ONION_LAYOUT;
     }
+
 
     TEST_TextMessageError(m_key,
                           "Should be using SECURITY_RATING::PLAIN!");
 
-    if (encryptionNotSupported(f))
-    {
+    if (encryptionNotSupported(f)) {
         TEST_TextMessageError(SECURITY_RATING::SENSITIVE != sec_rating,
                               "A SENSITIVE security rating requires the"
                               " field to be supported with cryptography!");
@@ -417,37 +399,29 @@ onionlayout FieldMeta::determineOnionLayout(const AES_KEY *const m_key,
     }
 
     // Don't encrypt AUTO_INCREMENT.
-    if (Field::NEXT_NUMBER == f->unireg_check)
-    {
+    if (Field::NEXT_NUMBER == f->unireg_check) {
         return PLAIN_ONION_LAYOUT;
     }
 
     // Test if FH works. Yes!
 
-    if (SECURITY_RATING::SENSITIVE == sec_rating)
-    {
-        if (true == IsMySQLTypeNumeric(f->sql_type))
-        {
-            return needFrequencySmoothing(fname) ? FH_NUM_ONION_LAYOUT : NUM_ONION_LAYOUT;
+    if (SECURITY_RATING::SENSITIVE == sec_rating) {
+        if (true == IsMySQLTypeNumeric(f->sql_type)) {
+            return needFrequencySmoothing(fname) ?
+            		FH_NUM_ONION_LAYOUT : NUM_ONION_LAYOUT;
+        } else {
+        	return needFrequencySmoothing(fname) ?
+        	        FH_STR_ONION_LAYOUT : STR_ONION_LAYOUT;
         }
-        else
-        {
-            return needFrequencySmoothing(fname) ? FH_STR_ONION_LAYOUT : STR_ONION_LAYOUT;
+    } else if (SECURITY_RATING::BEST_EFFORT == sec_rating) {
+        if (true == IsMySQLTypeNumeric(f->sql_type)) {
+        	return needFrequencySmoothing(fname) ?
+        	            	  FH_NUM_ONION_LAYOUT : NUM_ONION_LAYOUT;
+        } else {
+        	return needFrequencySmoothing(fname) ?
+        	        	      FH_STR_ONION_LAYOUT : STR_ONION_LAYOUT;
         }
-    }
-    else if (SECURITY_RATING::BEST_EFFORT == sec_rating)
-    {
-        if (true == IsMySQLTypeNumeric(f->sql_type))
-        {
-            return needFrequencySmoothing(fname) ? FH_NUM_ONION_LAYOUT : NUM_ONION_LAYOUT;
-        }
-        else
-        {
-            return needFrequencySmoothing(fname) ? FH_STR_ONION_LAYOUT : STR_ONION_LAYOUT;
-        }
-    }
-    else
-    {
+    } else {
         FAIL_TextMessageError("Bad SECURITY_RATING in"
                               " determineOnionLayout(...)!");
     }
@@ -466,24 +440,17 @@ std::string FieldMeta::determineDefaultValue(bool has_default,
     const static std::string zero_string = "'0'";
     const static std::string empty_string = "";
 
-    if (false == has_default)
-    {
+    if (false == has_default) {
         // This value should never be used.
         return empty_string;
     }
 
-    if (cf->def)
-    {
+    if (cf->def) {
         return ItemToString(*cf->def);
-    }
-    else
-    {
-        if (true == IsMySQLTypeNumeric(cf->sql_type))
-        {
+    } else {
+        if (true == IsMySQLTypeNumeric(cf->sql_type)) {
             return zero_string;
-        }
-        else
-        {
+        } else {
             return empty_string;
         }
     }
@@ -505,13 +472,14 @@ TableMeta::deserialize(unsigned int id, const std::string &serial)
     const std::string salt_name = vec[3];
     const unsigned int counter = atoi(vec[4].c_str());
 
-    return std::unique_ptr<TableMeta>(new TableMeta(id, anon_table_name, hasSensitive, has_salt,
-                                                    salt_name, counter));
+    return std::unique_ptr<TableMeta>
+        (new TableMeta(id, anon_table_name, hasSensitive, has_salt,
+                       salt_name, counter));
 }
 
 std::string TableMeta::serialize(const DBObject &parent) const
 {
-    const std::string &serial =
+    const std::string &serial = 
         serialize_string(getAnonTableName()) +
         serialize_string(bool_to_string(hasSensitive)) +
         serialize_string(bool_to_string(has_salt)) +
@@ -533,15 +501,14 @@ std::string TableMeta::getAnonTableName() const
 std::vector<FieldMeta *> TableMeta::orderedFieldMetas() const
 {
     std::vector<FieldMeta *> v;
-    for (auto it = children.begin(); it != children.end(); it++)
-    {
+    for (auto it = children.begin(); it != children.end(); it++) {
         v.push_back((*it).second.get());
     }
 
     std::sort(v.begin(), v.end(),
-              [](FieldMeta *a, FieldMeta *b) {
-                  return a->getUniq() < b->getUniq();
-              });
+              [] (FieldMeta *a, FieldMeta *b) {
+                return a->getUniq() < b->getUniq();
+              }); 
 
     return v;
 }
@@ -549,15 +516,15 @@ std::vector<FieldMeta *> TableMeta::orderedFieldMetas() const
 std::vector<FieldMeta *> TableMeta::defaultedFieldMetas() const
 {
     std::vector<FieldMeta *> v;
-    for (auto it = children.begin(); it != children.end(); it++)
-    {
+    for (auto it = children.begin(); it != children.end(); it++) {
         v.push_back((*it).second.get());
     }
 
     std::vector<FieldMeta *> out_v;
     std::copy_if(v.begin(), v.end(), std::back_inserter(out_v),
-                 [](const FieldMeta *const fm) -> bool {
-                     return fm->hasDefault();
+                 [] (const FieldMeta *const fm) -> bool
+                 {
+                    return fm->hasDefault();
                  });
 
     return out_v;
@@ -589,89 +556,85 @@ DatabaseMeta::serialize(const DBObject &parent) const
     return serial;
 }
 
-bool IsMySQLTypeNumeric(enum_field_types t)
-{
-    switch (t)
-    {
-    case MYSQL_TYPE_DECIMAL:
-    case MYSQL_TYPE_TINY:
-    case MYSQL_TYPE_SHORT:
-    case MYSQL_TYPE_LONG:
-    case MYSQL_TYPE_FLOAT:
-    case MYSQL_TYPE_DOUBLE:
-    case MYSQL_TYPE_LONGLONG:
-    case MYSQL_TYPE_INT24:
-    case MYSQL_TYPE_NEWDECIMAL:
-        return true;
-    default:
-        return false;
+bool
+IsMySQLTypeNumeric(enum_field_types t) {
+    switch (t) {
+        case MYSQL_TYPE_DECIMAL:
+        case MYSQL_TYPE_TINY:
+        case MYSQL_TYPE_SHORT:
+        case MYSQL_TYPE_LONG:
+        case MYSQL_TYPE_FLOAT:
+        case MYSQL_TYPE_DOUBLE:
+        case MYSQL_TYPE_LONGLONG:
+        case MYSQL_TYPE_INT24:
+        case MYSQL_TYPE_NEWDECIMAL:
+            return true;
+        default: return false;
     }
 }
 
-std::string getRandomString(const unsigned int &length)
-{
+std::string getRandomString(const unsigned int &length) {
     std::random_device rd;
     std::mt19937 engine(rd());
     std::uniform_int_distribution<> dist(0, possible_characters.size() - 1);
     std::string ret = "";
-    for (unsigned int i = 0; i < length; i++)
-    {
+    for (unsigned int i = 0; i < length; i++) {
         unsigned int random_index = dist(engine); //get index between 0 and possible_characters.size()-1
 
-        while (i == 0 && '0' == possible_characters[random_index])
-        {
-            random_index = dist(engine);
+        while (i == 0 && '0' == possible_characters[random_index]) {
+        	random_index = dist(engine);
         }
         ret += possible_characters[random_index];
+
     }
 
     return ret;
 }
 
 std::ostream &
-operator<<(std::ostream &oss, const UpdateOPE &ope)
+operator << (std::ostream & oss, const UpdateOPE &ope)
 {
-    oss << "pos: " << ope.pos << std::endl;
-    oss << "cipher: " << ope.ciphertext << std::endl;
-    oss << "table_name: " << ope.table_name << std::endl;
-    oss << "encoding_field: " << ope.encoding_column_name << std::endl;
-    oss << "ope_field: " << ope.ope_column_name << std::endl;
+	oss << "pos: " << ope.pos << std::endl;
+	oss << "cipher: " << ope.ciphertext << std::endl;
+	oss << "table_name: " << ope.table_name << std::endl;
+	oss << "encoding_field: " << ope.encoding_column_name << std::endl;
+	oss << "ope_field: " << ope.ope_column_name << std::endl;
 
-    return oss;
+	return oss;
 }
 
 std::string
 call_pro_insert(const UpdateOPE &ope)
 {
-    std::string s = "CALL pro_insert(";
-    s.append(ope.pos + ", ");
-    s.append(ope.ciphertext + ", ");
-    s.append(ope.encoding_column_name + ", ");
-    s.append(ope.ope_column_name + ", ");
-    s.append(ope.identifier + ");");
+	std::string s = "CALL pro_insert(";
+	s.append(ope.pos + ", ");
+	s.append(ope.ciphertext + ", ");
+	s.append(ope.encoding_column_name + ", ");
+	s.append(ope.ope_column_name + ", ");
+	s.append(ope.identifier + ");");
 
-    return s;
+	return s;
 }
 
 std::ostringstream &
-operator<<(std::ostringstream &oss, const UpdateOPE &ope)
+operator << (std::ostringstream &oss, const UpdateOPE &ope)
 {
-    /**
+	/**
 	 * This would generate a SQL function invoker:
 	 * 		> CALL pro_insert(<pos>, <ct>, <table_name>, <encoding_column_name>, <ope_column_name>);
 	 */
 
-    oss << "CALL pro_insert(";
+	oss << "CALL pro_insert(";
 
-    oss << ope.pos << ", ";
-    oss << ope.ciphertext << ", ";
-    oss << ope.table_name << ", ";
-    oss << ope.encoding_column_name << ", ";
-    oss << ope.ope_column_name << ", ";
-    oss << ope.identifier << ");";
+	oss << ope.pos << ", ";
+	oss << ope.ciphertext << ", ";
+	oss << ope.table_name << ", ";
+	oss << ope.encoding_column_name << ", ";
+	oss << ope.ope_column_name << ", ";
+	oss << ope.identifier << ");";
 
-    /*oss << "SELECT CONCAT_WS(";
+	/*oss << "SELECT CONCAT_WS(";
 	oss << "\"\", \"UPDATE \", ";
 	oss << ope.table_name << ", ";*/
-    return oss;
+	return oss;
 }

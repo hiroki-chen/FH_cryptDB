@@ -24,7 +24,7 @@
 #include "parser/rapidjson/filewritestream.h"
 
 // class/object names we don't care to know the name of
-#define ANON ANON_NAME(__anon_id_const)
+#define ANON                ANON_NAME(__anon_id_const)
 
 // encrypts a constant item based on the information in a
 // FIXME: @i should be const ref.
@@ -35,10 +35,10 @@ encrypt_item(const Item &i, const OLK &olk, Analysis &a)
 
     // Fetch the database name, table name.
 
-    FieldMeta *const fm = olk.key;
+    FieldMeta * const fm = olk.key;
     const std::string db_name = a.getDatabaseName();
     const std::string field_name = fm->fname;
-    const std::string &table_name = a.table_name_last_used;
+    const std::string& table_name = a.table_name_last_used;
 
     salt_type IV = 0;
 
@@ -46,102 +46,93 @@ encrypt_item(const Item &i, const OLK &olk, Analysis &a)
      * This can be invoked by UPDATE handler.
      */
 
-    if (needFrequencySmoothing(field_name))
-    {
-        rapidjson::Document doc;
-        if (!a.update)
-        {
-            std::vector<double> params = a.variables[VariableLocator(db_name, table_name, field_name)];
-            /**
+    if (needFrequencySmoothing(field_name)) {
+    	rapidjson::Document doc;
+    	if (!a.update) {
+    		std::vector<double> params = a.variables[VariableLocator(db_name, table_name, field_name)];
+    		    	/**
     		    	 * If there is no parameter vector, or the size is not 6, for this item, then something must have gone wrong.
     		    	 */
-            assert(8 == params.size());
+    		assert(8 == params.size());
 
-            unsigned int interval_num = params[1];
-            unsigned int left = params[4];
-            unsigned int right = params[5];
-            double val;
+    		unsigned int interval_num = params[1];
+    		unsigned int left = params[4];
+    		unsigned int right = params[5];
+    		double val;
 
-            if (Item::Type::INT_ITEM == i.type())
-            { // Test.
-                val = RiboldMYSQL::val_uint(i);
-            }
+    		if (Item::Type::INT_ITEM == i.type()) { // Test.
+    		    val = RiboldMYSQL::val_uint(i);
+    		}
 
-            MyItem sd = MyItem(db_name, table_name, field_name, RiboldMYSQL::val_real(i));
-            std::cout << "sd: " << sd.getValue() << std::endl;
-            unsigned int pos = a.count_table[sd]++;
+        	MyItem sd = MyItem(db_name, table_name, field_name, RiboldMYSQL::val_real(i));
+        	std::cout << "sd: " << sd.getValue() << std::endl;
+        	unsigned int pos = a.count_table[sd]++;
 
-            std::pair<unsigned int, unsigned int> itv =
-                getIntervalForItem(interval_num, std::make_pair(left, right), val);
+        	std::pair<unsigned int, unsigned int> itv =
+        			getIntervalForItem(interval_num, std::make_pair(left, right), val);
 
-            std::vector<std::unique_ptr<Salt>> &salt_table =
-                a.salt_table[Interval(itv.first, itv.second, db_name, table_name, field_name)];
-            std::cout << "size: " << salt_table.size() << std::endl;
-            // TODO: reset count.
-            if (pos + 1 == salt_table.size())
-            {
-                a.count_table[MyItem(db_name, table_name, field_name, RiboldMYSQL::val_real(i))] = 0;
-            }
+        	std::vector<std::unique_ptr<Salt>>& salt_table =
+        			a.salt_table[Interval(itv.first, itv.second, db_name, table_name, field_name)];
+        	std::cout << "size: " << salt_table.size() << std::endl;
+        	// TODO: reset count.
+        	if (pos + 1 == salt_table.size()) {
+        		a.count_table[MyItem(db_name, table_name, field_name, RiboldMYSQL::val_real(i))] = 0;
+        	}
 
-            assert(pos < salt_table.size());
+        	assert(pos < salt_table.size());
 
-            IV = stoull(salt_table[pos].get()->getSaltName());
-            std::cout << "IV: " << IV << std::endl;
+        	IV = stoull(salt_table[pos].get()->getSaltName());
+        	std::cout << "IV: " << IV << std::endl;
 
-            OnionMeta *const om = fm->getOnionMeta(olk.o);
+            OnionMeta * const om = fm->getOnionMeta(olk.o);
 
-            Item *const ret_i = encrypt_item_layers(i, olk.o, *om, a, doc, IV);
+            Item * const ret_i = encrypt_item_layers(i, olk.o, *om, a, doc, IV);
 
             return ret_i;
-        }
-        else
-        {
-            std::string dir = "CryptDB_DATA/";
-            dir.append(db_name + '/');
-            dir.append(table_name + "/");
-            dir.append(field_name + ".json");
+    	} else {
+    		std::string dir = "CryptDB_DATA/";
+    		dir.append(db_name + '/');
+    		dir.append(table_name + "/");
+    		dir.append(field_name + ".json");
 
-            rapidjson::Document doc;
+    		rapidjson::Document doc;
 
-            FILE *in_file = fopen(dir.c_str(), "r");
-            char read_buffer[65536];
-            rapidjson::FileReadStream frs(in_file, read_buffer, sizeof(read_buffer));
+    		FILE *in_file = fopen(dir.c_str(), "r");
+    		char read_buffer[65536];
+    		rapidjson::FileReadStream frs(in_file, read_buffer, sizeof(read_buffer));
 
-            // Parse the file into DOM.
-            doc.ParseStream(frs);
+    		// Parse the file into DOM.
+    		doc.ParseStream(frs);
 
-            std::vector<double> &params = a.variables[VariableLocator(db_name, table_name, field_name)];
+    		std::vector<double> &params = a.variables[VariableLocator(db_name, table_name, field_name)];
 
-            salt_type IV = 0;
-            if (SECLEVEL::FHDET == olk.l)
-            {
-                IV = stoull(getSalt(params, i, db_name, table_name, field_name, a, doc));
-            }
+    		salt_type IV = 0;
+    		if (SECLEVEL::FHDET == olk.l) {
+    			IV = stoull(getSalt(params, i, db_name, table_name, field_name, a, doc));
+    		}
 
-            // TODO: write the document back!
-            // encrypt_item_all_onions(i, fm, IV, a, l);
-            assert(writeDomToFile(doc, dir));
+    		// TODO: write the document back!
+    		// encrypt_item_all_onions(i, fm, IV, a, l);
+    		assert(writeDomToFile(doc, dir));
 
-            if (!fm && oPLAIN == olk.o)
-            {
-                return RiboldMYSQL::clone_item(i);
-            }
-            assert(fm);
+    		if (!fm && oPLAIN == olk.o) {
+    			return RiboldMYSQL::clone_item(i);
+    		}
+    		assert(fm);
 
-            const onion o = olk.o;
+    		const onion o = olk.o;
             //const auto it = a.salts.find(fm);
 
-            OnionMeta *const om = fm->getOnionMeta(o);
-            Item *const ret_i = encrypt_item_layers(i, o, *om, a, doc, IV);
+            OnionMeta * const om = fm->getOnionMeta(o);
+            Item * const ret_i = encrypt_item_layers(i, o, *om, a, doc, IV);
 
             return ret_i;
-        }
+    	}
     }
 }
 
 static class ANON : public CItemSubtypeIT<Item_string,
-                                          Item::Type::STRING_ITEM>
-{
+                                          Item::Type::STRING_ITEM> {
     virtual RewritePlan *
     do_gather_type(const Item_string &i, Analysis &a) const
     {
@@ -151,8 +142,7 @@ static class ANON : public CItemSubtypeIT<Item_string,
         return new RewritePlan(FULL_EncSet_Str, rsn);
     }
 
-    virtual Item *do_optimize_type(Item_string *i, Analysis &a) const
-    {
+    virtual Item * do_optimize_type(Item_string *i, Analysis & a) const {
         return i;
     }
 
@@ -172,8 +162,7 @@ static class ANON : public CItemSubtypeIT<Item_string,
     }
 } ANON;
 
-static class ANON : public CItemSubtypeIT<Item_int, Item::Type::INT_ITEM>
-{
+static class ANON : public CItemSubtypeIT<Item_int, Item::Type::INT_ITEM> {
     virtual RewritePlan *
     do_gather_type(const Item_int &i, Analysis &a) const
     {
@@ -184,7 +173,7 @@ static class ANON : public CItemSubtypeIT<Item_int, Item::Type::INT_ITEM>
         return new RewritePlan(FULL_EncSet_Int, rsn);
     }
 
-    virtual Item *do_optimize_type(Item_int *i, Analysis &a) const
+    virtual Item * do_optimize_type(Item_int *i, Analysis & a) const
     {
         return i;
     }
@@ -202,14 +191,13 @@ static class ANON : public CItemSubtypeIT<Item_int, Item::Type::INT_ITEM>
     do_rewrite_insert_type(const Item_int &i, const FieldMeta &fm,
                            Analysis &a, std::vector<Item *> *l) const
     {
-        std::cout << RiboldMYSQL::val_uint(i) << std::endl;
+    	std::cout << RiboldMYSQL::val_uint(i) << std::endl;
         typical_rewrite_insert_type(i, fm, a, l);
     }
 } ANON;
 
 static class ANON : public CItemSubtypeIT<Item_decimal,
-                                          Item::Type::DECIMAL_ITEM>
-{
+                                          Item::Type::DECIMAL_ITEM> {
     virtual RewritePlan *
     do_gather_type(const Item_decimal &i, Analysis &a) const
     {
@@ -221,7 +209,7 @@ static class ANON : public CItemSubtypeIT<Item_decimal,
         return new RewritePlan(FULL_EncSet_Int, rsn);
     }
 
-    virtual Item *do_optimize_type(Item_decimal *i, Analysis &a) const
+    virtual Item * do_optimize_type(Item_decimal *i, Analysis & a) const
     {
         return i;
     }
@@ -233,7 +221,7 @@ static class ANON : public CItemSubtypeIT<Item_decimal,
         LOG(cdb_v) << "do_rewrite_type " << i << std::endl;
 
         return encrypt_item(i, constr, a);
-        /*        double n = i->val_real();
+/*        double n = i->val_real();
         char buf[sizeof(double) * 2];
         sprintf(buf, "%x", (unsigned int)n);
         // TODO(stephentu): Do some actual encryption of the double here
