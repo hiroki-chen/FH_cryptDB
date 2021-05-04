@@ -1707,5 +1707,3 @@ void SchemaCache::lowLevelCurrentUnstale(const std::unique_ptr<Connect> &e_conn)
 {
 	lowLevelToggleCurrentStaleness(e_conn, this->id, false);
 }
-
-// End.
