@@ -876,11 +876,13 @@ generateUpdateOPE(const double &plaintext,
 	unsigned int distance = std::distance(local_table.begin(), iter);
 	//std::cout << "distance: " <<distance << std::endl;
 	const unsigned int total = std::accumulate(local_table.begin(), std::next(local_table.begin(), distance), 0, accu);
-
+	//std::cout << "pos before this ciphertext: " << total << std::endl;
 	/**
 	 * Generate a random position.
+	 *
+	 * Be aware of the range.
 	 */
-	std::uniform_int_distribution<int> dist(total + 1, total + 1 + iter->second);
+	std::uniform_int_distribution<int> dist(total + 1, total + iter->second);
 	std::random_device rd;
 	std::mt19937 engine(rd());
 	const unsigned int pos = dist(engine);
@@ -1177,6 +1179,13 @@ bool needEncryption(const std::string &field_name)
 	return 0 == field_name.substr(0, 4).compare(ENC_IDENTIFIER);
 }
 
+void escapeCipherOPE(const ProxyState &ps, UpdateOPE &ope)
+{
+	ope.ciphertext = escapeString(ps.getConn(), ope.ciphertext);
+	ope.ciphertext = "\'" + ope.ciphertext;
+	ope.ciphertext = ope.ciphertext + "\'";
+}
+
 bool retrieveDefaultDatabase(unsigned long long thread_id,
 							 const std::unique_ptr<Connect> &c,
 							 std::string *const out_name)
@@ -1219,12 +1228,19 @@ void queryPreamble(ProxyState &ps, const std::string &q,
 	/**
      * Call pro_insert.
      */
-	std::cout << "sizeof ps. updateope " << ps.updateOPEs.size() << std::endl;
-	if (!ps.updateOPEs.empty())
-	{
-		// TODO: generate a call sql.
-		std::cout << "About to generate call!\n";
-	}
+	/*
+    if (!ps.updateOPEs.empty()) {
+    	// TODO: generate a call sql.
+    	//std::cout << "About to generate call!\n";
+    	for (auto &ope : ps.updateOPEs) {
+    		escapeCipherOPE(ps, *ope.get());
+    		std::ostringstream oss;
+    		oss << *ope.get();
+    		std::cout << oss.str() << std::endl;
+    		out_queryz->push_back(oss.str());
+    	}
+    }
+    */
 
 	// We handle before any queries because a failed query
 	// may stale the database during recovery and then
@@ -1707,5 +1723,3 @@ void SchemaCache::lowLevelCurrentUnstale(const std::unique_ptr<Connect> &e_conn)
 {
 	lowLevelToggleCurrentStaleness(e_conn, this->id, false);
 }
-
-// End.

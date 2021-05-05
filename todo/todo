@@ -39,3 +39,11 @@ A map from interval to a vector containing salts.
 	> Issue the delete query to the DBMS;
 	> Update the salt table;
 	> Write it to the file, if not failed;
+
+——————————————FREQUENCY SMOOTHING FOR DETERMINISTIC ENCRYPTION FINISHED-------------------
+
+--------------FREQUENCY HIDING FOR ORDER-PRESERVING ENCRYPTION START----------------------
+1. Build a local table for look-up. We assume that the message space won't be big;
+2. Build UDFs for the server;
+3. Call these UDFs by the client (first we do an insertion and then we call pro_insert);
+4. Escape strings in the ciphertext...
