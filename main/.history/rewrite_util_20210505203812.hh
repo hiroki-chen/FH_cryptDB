@@ -120,7 +120,8 @@ getSalt(const Item &item, const double &alpha,
         const std::pair<unsigned int, unsigned int> &range,
         Analysis &a);
 
-int chooseSalt(std::vector<std::unique_ptr<Salt>> &salts, const double &alpha,
+int
+chooseSalt(std::vector<std::unique_ptr<Salt>> &salts, const double &alpha,
                const unsigned int &total_salt_used,
                const unsigned int &ptext_size,
                const std::pair<unsigned int, unsigned int> &interval,
@@ -129,21 +130,25 @@ int chooseSalt(std::vector<std::unique_ptr<Salt>> &salts, const double &alpha,
 std::vector<std::string>
 getFiles(const std::string &dir);
 
-bool loadAllSaltsFromFile(const std::string &db_name, const TABLE_LIST *const table_list, Analysis &a);
+bool
+loadAllSaltsFromFile(const std::string &db_name, const TABLE_LIST *const table_list, Analysis &a);
 
 /**
  * HACK: ONLY INVOKED BY SaltTable.
  */
-bool writeAllTablesToJsonDOM(rapidjson::Document &doc,
+bool
+writeAllTablesToJsonDOM(rapidjson::Document &doc,
                              const std::pair<unsigned int, unsigned int> &interval,
                              const std::vector<std::unique_ptr<Salt>> &salt_table,
                              const std::map<double, unsigned int> &local_table);
 
-bool writeSaltTableToJsonDOM(rapidjson::Document &doc,
+bool
+writeSaltTableToJsonDOM(rapidjson::Document &doc,
                              const std::pair<unsigned int, unsigned int> &interval,
                              const std::vector<std::unique_ptr<Salt>> &salt_table);
 
-bool writeLocalTableToJsonDOM(rapidjson::Document &doc,
+bool
+writeLocalTableToJsonDOM(rapidjson::Document &doc,
                               const std::map<double, unsigned int> &local_table);
 
 std::string

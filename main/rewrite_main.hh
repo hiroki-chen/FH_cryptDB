@@ -159,8 +159,6 @@ char getBYteValue(char i);
 char *EncodeBase64(char *buf, long size);
 char *DecodeBase64(char *base64Char, long base64CharSize);
 
-bool isDETFunc(const Item_func &item);
-
 unsigned long long
 getSaltCount(const std::string &db_name, const std::string &table_name, const std::string &field_name,
              const std::string &val, Analysis &a);

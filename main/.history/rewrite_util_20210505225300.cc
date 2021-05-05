@@ -19,9 +19,9 @@
 extern CItemTypesDir itemTypes;
 
 #define LEXSTRING(cstr)            \
-	{                              \
-		(char *)cstr, sizeof(cstr) \
-	}
+    {                              \
+        (char *)cstr, sizeof(cstr) \
+    }
 
 /**
  * UDF for FHSerach generation!
@@ -214,8 +214,7 @@ rewrite_table_list(List<TABLE_LIST> tll, Analysis &a)
 Item *
 getNewFunc(Item *const lhs, Item *const rhs, const Item_func::Functype &type)
 {
-	switch (type)
-	{
+	switch(type){
 	case Item_func::Functype::LT_FUNC:
 	case Item_func::Functype::LE_FUNC:
 		return new Item_func_le(lhs, rhs);
@@ -256,8 +255,8 @@ rewrite_args_fh_ope(const Item_func *const item, Analysis &a)
 
 	//double val = RiboldMYSQL::val_real(*(item->arguments()[1]));
 	unsigned int pos = findPos(a.local_table[VariableLocator(db_name, table_name, field_name)],
-							   *(item->arguments()[1]),
-							   item->functype());
+							    *(item->arguments()[1]),
+								item->functype());
 
 	Item *const udf = getFHSerachUDF(pos);
 
@@ -273,7 +272,7 @@ rewrite_args_fh_ope(const Item_func *const item, Analysis &a)
 	const std::string anon_table_name = a.getAnonTableName(db_name, table_name);
 
 	Item_field *const anon_item_field =
-		make_item_field(*item_field, anon_table_name, anon_field_name_encoding);
+	            make_item_field(*item_field, anon_table_name, anon_field_name_encoding);
 
 	return getNewFunc(anon_item_field, udf, item->functype());
 }
@@ -724,9 +723,7 @@ findPos(const std::map<double, unsigned int> &local_table,
 		{
 			pos += item.second;
 			last = item.second;
-		}
-		else
-		{
+		} else {
 			break;
 		}
 	}
@@ -746,7 +743,8 @@ findPos(const std::map<double, unsigned int> &local_table,
 	return pos;
 }
 
-bool loadAllSaltsFromFile(const std::string &db_name, const TABLE_LIST *const table_list, Analysis &a)
+bool
+loadAllSaltsFromFile(const std::string &db_name, const TABLE_LIST *const table_list, Analysis &a)
 {
 	std::string path = "CryptDB_DATA/";
 	path.append(db_name + "/");
@@ -1281,22 +1279,24 @@ void typical_rewrite_insert_type(const Item &i, const FieldMeta &fm,
 	}
 }
 
-bool isDETFunc(const Item_func &item)
+bool
+isDETFunc(const Item_func &item)
 {
-	switch (item.functype())
-	{
-	case Item_func::Functype::EQ_FUNC:
-	case Item_func::Functype::NE_FUNC:
-	case Item_func::Functype::EQUAL_FUNC:
-		return true;
-	default:
-		return false;
-	}
+    switch (item.functype())
+    {
+    case Item_func::Functype::EQ_FUNC:
+    case Item_func::Functype::NE_FUNC:
+    case Item_func::Functype::EQUAL_FUNC:
+        return true;
+    default:
+        return false;
+    }
 
-	return false;
+    return false;
 }
 
-bool isInequalityFunc(const Item_func &item)
+bool
+isInequalityFunc(const Item_func &item)
 {
 	switch (item.functype())
 	{

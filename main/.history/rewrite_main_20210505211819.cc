@@ -1480,7 +1480,9 @@ typical_do_transform_where(const Item &item, Analysis &a)
     {
         const Item_cond &tmp_item = static_cast<const Item_cond &>(item);
 
-        return Item_cond::Functype::COND_AND_FUNC == tmp_item.functype() ? do_transform_where_and(static_cast<const Item_cond_and &>(item), a) : do_transform_where_or(static_cast<const Item_cond_or &>(item), a);
+        return Item_cond::Functype::COND_AND_FUNC == tmp_item.functype() ?
+        		do_transform_where_and(static_cast<const Item_cond_and &>(item), a) :
+				do_transform_where_or(static_cast<const Item_cond_or &>(item), a);
     }
     else
     {
@@ -1533,12 +1535,14 @@ do_transform_where_or(const Item_cond_or &item_cond_or, Analysis &a)
     return new_item_cond;
 }
 
+
+
 Item *
 makeItemCondPairs(const Item_func &item, Analysis &a)
 {
-    // std::cout << "functype: " << item.functype();
-    const std::string &db_name = a.getDatabaseName();
-    Item *const *const args = item.arguments();
+	// std::cout << "functype: " << item.functype();
+	const std::string &db_name = a.getDatabaseName();
+	Item *const *const args = item.arguments();
 
     if (true == isDETFunc(item))
     {
@@ -1588,25 +1592,23 @@ makeItemCondPairs(const Item_func &item, Analysis &a)
 
             return item_cond;
         }
-        /**
+    /**
      * If this is an inequality comparison, we should load local table into Analysis.
      */
-    }
-    else if (true == isInequalityFunc(item))
-    {
-        std::cout << "hello\n";
-        const Item_field *const item_field = static_cast<const Item_field *>(args[0]);
-        const std::string table_name = item_field->table_name;
-        const std::string field_name = item_field->name;
+    } else if (true == isInequalityFunc(item)) {
+    	std::cout << "hello\n";
+    	const Item_field *const item_field = static_cast<const Item_field *>(args[0]);
+    	const std::string table_name = item_field->table_name;
+    	const std::string field_name = item_field->name;
 
-        std::string path = "CryptDB_DATA/";
-        path.append(db_name + "/");
-        path.append(table_name + "/");
-        path.append(field_name + ".json");
+    	std::string path = "CryptDB_DATA/";
+    	path.append(db_name + "/");
+    	path.append(table_name + "/");
+    	path.append(field_name + ".json");
 
-        rapidjson::Document doc;
-        assert(getDocumentFromFileAndLoadSalt(path, a, doc, false));
-        a.loadLocalTable(doc);
+    	rapidjson::Document doc;
+    	assert(getDocumentFromFileAndLoadSalt(path, a, doc, false));
+    	a.loadLocalTable(doc);
     }
 
     return copyWithTHD(&item);

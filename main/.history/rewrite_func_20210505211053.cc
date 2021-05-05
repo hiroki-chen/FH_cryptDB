@@ -326,10 +326,9 @@ class CItemCompare : public CItemSubtypeFT<Item_func, FT>
         Item *const *const args = i.arguments();
         const std::string &field_name = args[0]->name;
 
-        if (isInequalityFunc(i) && needFrequencySmoothing(field_name))
-        {
-            //std::cout << "I am here!\n";
-            return rewrite_args_fh_ope(static_cast<const Item_func *>(&i), a);
+        if (isInequalityFunc(i) && needFrequencySmoothing(field_name)) {
+        	//std::cout << "I am here!\n";
+        	return rewrite_args_fh_ope(static_cast<const Item_func *>(&i), a);
         }
 
         return rewrite_args_FN(i, constr,

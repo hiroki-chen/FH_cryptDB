@@ -410,7 +410,7 @@ public:
               const std::string &encoding_column_name,
               const std::string &ope_column_name,
               const std::string &identifier)
-        : pos(pos), ciphertext("\"" + ciphertext + "\""), table_name("\'" + table_name + "\'"),
+        : pos(pos - 1), ciphertext("\"" + ciphertext + "\""), table_name("\'" + table_name + "\'"),
           encoding_column_name("\'" + encoding_column_name + "\'"), ope_column_name("\'" + ope_column_name + "\'"),
           identifier(identifier)
     {
