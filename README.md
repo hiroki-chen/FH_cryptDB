@@ -20,6 +20,8 @@ CREATE FUNCTION XXX RETURNS REAL SONAME 'ope.so';
 ```
 step by step.
 
+**Important: FH_cryptDB is non-commercial, nor deployable on any produtive platforms and systems. This is just a prototype for research and study. Any warranty for security, robustness, or any other things is not provided. Anyone or any entity who uses the prototype will be acknowledges as one who already read the notice here and if any lethal error happens, the author is free of any responsibility.**
+
 CryptDB's website (including latest source code): http://css.csail.mit.edu/cryptdb
 
 Wiki: https://github.com/burrows-labs/cryptdb-wiki/wiki/_pages
