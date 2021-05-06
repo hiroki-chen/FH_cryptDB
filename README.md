@@ -9,11 +9,19 @@ These following features are included in our model:
 P.S. If you want to compile the project, be sure that you use GCC whose version is higher than 4.7 or so and be sure it supports -std=c++11. We strongly recommend that -std=c++0x should be abandoned because it cannot support static initialization and some features in modern C++ language.
 
 Hint: In order to work properly, you should compile `ope.cpp` manually. Shell codes:
-```shellcode
-g++ -c -o -std=c++11 -fPIC -Wall ope.cpp ope.o;
-g++ -shared -o ope.so ope.o
+```sh
+g++ -c -o ope.o -std=c++11 -I </path/to/your/mysql/include/lib> -fPIC -Wall ope.cc;
+g++ -shared -o ope.so ope.o;
 ```
 Then add `ope.so` to your MySQL plugin directory: `/usr/lib/mysql/plugins/*.so`.
+```sh
+sudo mv obj/ope.so /usr/lib/mysql/plugins;
+```
+For convenience, you can run it by Makefile:
+```sh
+make install;
+```
+and it will generate an `obj` directory in which you can find `ope.o` as well as `ope.so`.
 Next, create all the functions with soname:
 ```sql
 CREATE FUNCTION XXX RETURNS REAL SONAME 'ope.so';
