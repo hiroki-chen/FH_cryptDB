@@ -1,0 +1,25 @@
+CXXFLAGS = -c -fPIC -I /usr/include/mysql -std=c++0x
+CXX = g++
+SHAREFLAGS = -shared
+OBJDIR = obj
+
+ope:
+	mkdir $(OBJDIR)
+	$(CXX) $(CXXFLAGS) -o $(OBJDIR)/ope.o ope.cc
+	$(CXX) $(SHAREFLAGS) -o $(OBJDIR)/ope.so $(OBJDIR)/ope.o
+clean:
+	rm -rf $(OBJDIR)/*o, $(OBJDIR)/*.so
+	rm -rf $(OBJDIR)
+
+install: ope
+	@echo "Ensure you are super user."
+
+ifeq ($(shell id -u), 0)
+	@echo "You are not root, run this target as root please"
+	exit 1
+	
+else
+	@echo "Running in root."
+	sudo cp $(OBJDIR) ope.so /usr/lib/mysql/plugins
+	@echo "Done."
+endif

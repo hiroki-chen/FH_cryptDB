@@ -167,7 +167,10 @@ bool getDocumentFromFileAndLoadSalt(const std::string &path, Analysis &a, rapidj
 
 bool tossACoin(const double &p);
 
-unsigned int
+/**
+ * 2nd parameter indicates whether the element is found.
+ */
+std::pair<unsigned int, bool>
 findPos(const std::map<double, unsigned int> &local_table, const Item &item, const Item_func::Functype &type);
 
 Item *
