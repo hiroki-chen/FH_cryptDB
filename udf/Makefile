@@ -8,7 +8,7 @@ ope:
 	$(CXX) $(CXXFLAGS) -o $(OBJDIR)/ope.o ope.cc
 	$(CXX) $(SHAREFLAGS) -o $(OBJDIR)/ope.so $(OBJDIR)/ope.o
 clean:
-	rm -rf $(OBJDIR)/*o, $(OBJDIR)/*.so
+	rm -rf $(OBJDIR)/*.o, $(OBJDIR)/*.so
 	rm -rf $(OBJDIR)
 
 install: ope
