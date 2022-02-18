@@ -1,5 +1,5 @@
 # FH_cryptDB
-We have implemented frequency smoothing for deterministic and order-preserving encryption schemes for CryptDB.
+We have implemented frequency smoothing for deterministic and frequency-hiding order-preserving encryption schemes for CryptDB.
 These following features are included in our model:
 1. Freqeuncy smoothing algorithms based on pseudorandom function(s);
 2. SQL Rewriter for `where` of *fh*-encrypted columns:
@@ -10,6 +10,9 @@ These following features are included in our model:
 ###Caveats
 1. If you want to compile the project, be sure that you use GCC whose version is higher than 4.7 or so and be sure it supports -std=c++11. We strongly recommend that -std=c++0x should be abandoned because it cannot support static initialization and some features in modern C++ language.
 2. For MySQL 8.0, you should rename `my_bool` to `bool` because some definitions have been removed and changed.
+
+### Important Notes
+This repository currently does **NOT** contain C++ code for the specific implementation for cryptographic algorithms we designed due to the shared copyright of the research group. The code will be available as soon as we decided to open-source it.
 
 ###Hint: in order to work properly, you should compile `ope.cc` manually. Shell codes:
 ```sh
